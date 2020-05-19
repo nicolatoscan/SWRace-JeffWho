@@ -19,5 +19,7 @@ ostream &out(cout);
 
 int main() {
 
+    
+
     return 0;
 }
