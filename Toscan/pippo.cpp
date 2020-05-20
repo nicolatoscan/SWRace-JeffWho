@@ -21,6 +21,7 @@ void printMat();
 void setWeight();
 void go(int r, int c, int from, bool avevaCurvato, bool deveCurvare, bool deveAndareDritto, int points, int ii, int depth);
 void newMax(int points, int n);
+int distance(int x1, int y1, int x2, int y2);
 struct Anello
 {
     int r;
@@ -47,6 +48,7 @@ int A;
 int **mat;
 int **solMat;
 double **weight;
+int **distances;
 int *sol;
 int *solR;
 int *solC;
@@ -64,9 +66,12 @@ int main()
     in >> B >> W;
     A = B + W;
     anelli = new Anello[B + W];
+
     mat = new int *[R];
     solMat = new int *[R];
+    distances = new int *[R];
     weight = new double *[R];
+
     sol = new int[R * C];
     solR = new int[R * C];
     solC = new int[R * C];
@@ -74,9 +79,11 @@ int main()
     {
         weight[r] = new double[C];
         mat[r] = new int[C];
+        distances[r] = new int[C];
         solMat[r] = new int[C];
         for (int c = 0; c < C; c++)
         {
+            distances[r][c] = INT32_MAX;
             weight[r][c] = 0;
             mat[r][c] = 0;
             solMat[r][c] = 0;
@@ -121,6 +128,44 @@ void printMat()
 
 void setWeight()
 {
+
+    //INFLUENCE
+    for (int i = 0; i < A; i++)
+    {
+        Anello a = anelli[i];
+        int r = a.r, c = a.c;
+        int anelliVicini = 0;
+        int ANLEBBO_BN = ANELLO_WHITE | ANELLO_BLACK;
+
+        if (mat[r + 1][c] & ANLEBBO_BN)
+            anelliVicini++;
+        if (mat[r - 1][c] & ANLEBBO_BN)
+            anelliVicini++;
+        if (mat[r][c + 1] & ANLEBBO_BN)
+            anelliVicini++;
+        if (mat[r][c - 1] & ANLEBBO_BN)
+            anelliVicini++;
+
+        int points = (anelliVicini > 1) ? -3 : 4;
+        weight[r][c] = points;
+        //SERVE ? forse no
+    }
+
+    //DISTANCE
+    for (int i = 0; i < A; i++)
+    {
+        Anello a = anelli[i];
+
+        if (weight[a.r][a.c] > 0)
+            for (int r = 0; r < R; r++)
+                for (int c = 0; c < C; c++)
+                    mat[r][c] = min(distance(a.r, a.c, r, c), mat[r][c]);
+    }
+}
+
+int distance(int x1, int y1, int x2, int y2)
+{
+    return abs(x1 - x2) + abs(y1 - y2);
 }
 
 void go(int r, int c, int from, bool avevaCurvato, bool deveCurvare, bool deveAndareDritto, int points, int ii, int depth)
