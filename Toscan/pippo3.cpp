@@ -14,7 +14,7 @@ using namespace std;
 ifstream in("input.txt");
 ofstream out("output.txt");
 #else
-ifstream in("../input/input7.txt");
+ifstream in("../input/input8.txt");
 ostream &out(cout);
 #endif
 
@@ -26,6 +26,7 @@ void redZone();
 void unione(int *a, int x, int y);
 int find(int *a, int n);
 int findNextInRedRec(int r, int c, int redColor, int from, bool avevaCurvato, bool deveCurvare, bool deveAndareDritto, int leftDepth);
+void bfs(int r, int c);
 
 struct Anello
 {
@@ -53,7 +54,8 @@ int **mat;
 int **red;
 int **visited;
 int **redSol;
-bool **visitedTemp;
+bool **visitedTemp; //FORSE UNIRE
+int **from;         //FORSE UNIRE
 int solI = 0;
 //int **maxFromHotsot; //TODO: sdfg
 
@@ -75,9 +77,11 @@ int main()
     visitedTemp = new bool *[R];
     sol = new int[R * C];
     redSol = new int *[R];
+    from = new int *[R];
 
     for (int r = 0; r < R; r++)
     {
+        from[r] = new int[C];
         visitedTemp[r] = new bool[C];
         visited[r] = new int[C];
         red[r] = new int[C];
@@ -85,6 +89,7 @@ int main()
         redSol[r] = new int[C];
         for (int c = 0; c < C; c++)
         {
+            from[r][c] = 0;
             redSol[r][c] = 0;
             visitedTemp[r][c] = false;
             visited[r][c] = 0;
@@ -109,7 +114,8 @@ int main()
 
     redZone();
     //printMat();
-    int res = findNextInRedRec(4, 2, 0, UP, false, false, false, 5);
+    //int res = findNextInRedRec(8, 3, 2, LEFT, false, false, false, 5);
+    bfs(16, 16);
     printRed();
     return 0;
 }
@@ -381,6 +387,99 @@ int findNextInRedRec(int r, int c, int redColor, int from, bool avevaCurvato, bo
     }
 
     return maxPoint + point;
+}
+
+void bfs(int r, int c)
+{
+    for (int rr = 0; rr < R; rr++)
+        for (int cc = 0; cc < C; cc++)
+            from[rr][cc] = 0;
+
+    queue<pair<int, int>> q;
+    q.push(make_pair(r, c));
+    int colorFound;
+    from[r][c] = UP; //FIX
+
+    while (!q.empty())
+    {
+        auto n = q.front();
+        r = n.first;
+        c = n.second;
+        q.pop();
+
+        colorFound = red[r][c];
+        if (colorFound >= 0)
+            break;
+
+        if (r > 0 && (from[r - 1][c] == 0))
+        {
+            from[r - 1][c] = DOWN;
+            q.push(make_pair(r - 1, c));
+        }
+        if (r < R - 1 && (from[r + 1][c]) == 0)
+        {
+            from[r + 1][c] = UP;
+            q.push(make_pair(r + 1, c));
+        }
+        if (c > 0 && (from[r][c - 1]) == 0)
+        {
+            from[r][c - 1] = RIGHT;
+            q.push(make_pair(r, c - 1));
+        }
+        if (c < C - 1 && (from[r][c + 1]) == 0)
+        {
+            from[r][c + 1] = LEFT;
+            q.push(make_pair(r, c + 1));
+        }
+    }
+    cout << " R: " << r << " C: " << c << " COLOR: " << colorFound << endl;
+
+    for (int rr = 0; rr < R; rr++)
+    {
+        for (int cc = 0; cc < C; cc++)
+            if (from[rr][cc] == UP)
+                cout << " U ";
+            else if (from[rr][cc] == RIGHT)
+                cout << " R ";
+            else if (from[rr][cc] == LEFT)
+                cout << " L ";
+            else if (from[rr][cc] == DOWN)
+                cout << " D ";
+            else
+                cout << " - ";
+        cout << endl;
+    }
+    cout << endl;
+    cout << endl;
+    return;
+
+    int nextDir;
+    do
+    {
+        nextDir = from[r][c];
+        switch (nextDir)
+        {
+        case UP:
+            cout << "UP" << endl;
+            r--;
+            break;
+        case DOWN:
+            cout << "DOWN" << endl;
+            r++;
+            break;
+        case LEFT:
+            cout << "LEFT" << endl;
+            c--;
+            break;
+        case RIGHT:
+            cout << "RIGHT" << endl;
+            c++;
+            break;
+
+        default:
+            break;
+        }
+    } while (nextDir != 0);
 }
 
 void printMat()
