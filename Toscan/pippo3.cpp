@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <ctime>
 #include <queue>
+#include <set>
 
 using namespace std;
 
@@ -24,6 +25,7 @@ void printNMat(int **mat);
 void redZone();
 void unione(int *a, int x, int y);
 int find(int *a, int n);
+int findNextInRedRec(int r, int c, int redColor, int from, bool avevaCurvato, bool deveCurvare, bool deveAndareDritto, int leftDepth);
 
 struct Anello
 {
@@ -37,6 +39,7 @@ struct Anello
 
 #define ANELLO_WHITE 64
 #define ANELLO_BLACK 128
+#define ANELLO_ANY (128 | 64)
 
 #define UP 1
 #define DOWN 2
@@ -49,6 +52,9 @@ int A;
 int **mat;
 int **red;
 int **visited;
+int **redSol;
+bool **visitedTemp;
+int solI = 0;
 //int **maxFromHotsot; //TODO: sdfg
 
 int *redZonePoints;
@@ -66,14 +72,21 @@ int main()
     mat = new int *[R];
     red = new int *[R];
     visited = new int *[R];
+    visitedTemp = new bool *[R];
     sol = new int[R * C];
+    redSol = new int *[R];
+
     for (int r = 0; r < R; r++)
     {
+        visitedTemp[r] = new bool[C];
         visited[r] = new int[C];
         red[r] = new int[C];
         mat[r] = new int[C];
+        redSol[r] = new int[C];
         for (int c = 0; c < C; c++)
         {
+            redSol[r][c] = 0;
+            visitedTemp[r][c] = false;
             visited[r][c] = 0;
             red[r][c] = -1;
             mat[r][c] = 0;
@@ -96,6 +109,7 @@ int main()
 
     redZone();
     //printMat();
+    int res = findNextInRedRec(4, 2, 0, UP, false, false, false, 5);
     printRed();
     return 0;
 }
@@ -186,8 +200,10 @@ void redZone()
         for (int c = 0; c < C; c++)
             if (red[r][c] > 0)
                 red[r][c] = toFix[red[r][c]];
-    
-    //fixRedZoneWR();
+
+    redZonePoints = new int[nr];
+    for (int i = 0; i < A; i++)
+        redZonePoints[red[anelli[i].r][anelli[i].c]]++;
 }
 
 int find(int *a, int n)
@@ -207,14 +223,164 @@ void unione(int *a, int x, int y)
 
 // ----- end RED ZONES -----
 
-void doRed(int r, int c, int maxPoint)
+void findPathInRedZone(int r, int c, int nArea)
 {
-    int points = 0;
-    int lastCurva = 100;
-    int avevoCurvato = false;
-    int stavoAndandoDritto = false;
+    for (int r = 0; r < R; r++)
+        for (int c = 0; c < C; c++)
+            visitedTemp[r][c] = false;
+}
 
-    //BFS
+int voidTrysLeft = 8;
+int puntiInZonaToDo = 6;
+
+int findNextInRedRec(int r, int c, int redColor, int from, bool avevaCurvato, bool deveCurvare, bool deveAndareDritto, int leftDepth)
+{
+    int point = 0;
+    if (r < 0 || r >= R || c < 0 || c >= C)
+        return -1;
+    if (deveCurvare && deveAndareDritto)
+        return -1;
+    if (red[r][c] != redColor)
+        return 0;
+    if (leftDepth != 5 && visitedTemp[r][c]) // MAYBE SET
+        return -1;
+
+    int me = mat[r][c];
+    if (((me & ANELLO_BLACK) && deveAndareDritto) || ((me & ANELLO_WHITE) && deveCurvare))
+        return -1;
+
+    if (me & (ANELLO_BLACK | ANELLO_WHITE))
+        point++;
+
+    if (leftDepth <= 0)
+        return point;
+    bool nextDeveCurvare = ((me & ANELLO_WHITE) && !avevaCurvato) ? true : false;
+    bool nextDeveAndareDritto = (me & ANELLO_BLACK) ? true : false;
+
+    int nextDir = 0;
+
+    if (deveAndareDritto || (me & ANELLO_WHITE)) //1 Possibilità
+    {
+        if (from == UP)
+            nextDir |= DOWN;
+        else if (from == DOWN)
+            nextDir |= UP;
+        else if (from == LEFT)
+            nextDir |= RIGHT;
+        else if (from == RIGHT)
+            nextDir |= LEFT;
+    }
+    else // > 1 possibilità
+    {
+        if (deveCurvare || (me & ANELLO_BLACK))
+        {
+            if (from == UP || from == DOWN)
+                nextDir |= (LEFT | RIGHT);
+            else
+                nextDir |= (UP | DOWN);
+        }
+        else
+        {
+            nextDir = (UP | DOWN | LEFT | RIGHT) & ~(from);
+        }
+
+        //CERCA ANELLI
+        // int preferedDir = 0;
+        // if (r > 0 && (mat[r - 1][c] & ANELLO_ANY))
+        //     preferedDir |= UP;
+        // if (r < R - 1 && (mat[r + 1][c] & ANELLO_ANY))
+        //     preferedDir |= DOWN;
+        // if (c > 0 && (mat[r][c - 1] & ANELLO_ANY))
+        //     preferedDir |= LEFT;
+        // if (c < C - 1 && (mat[r][c + 1] & ANELLO_ANY))
+        //     preferedDir |= RIGHT;
+    }
+
+    // for (int i = 0; i < leftDepth; i++)
+    //     cout << "  ";
+    // cout << "R: " << r << " C: " << c << " POINT: " << point << endl;
+
+    pair<int, int> *toSort = new pair<int, int>[4];
+    if (nextDir & UP)
+    {
+        int p = findNextInRedRec(r - 1, c, redColor, DOWN, (from & (LEFT | RIGHT)), nextDeveCurvare, nextDeveAndareDritto, leftDepth - 1);
+        toSort[0] = make_pair(p, UP);
+    }
+    if (nextDir & DOWN)
+    {
+        int p = findNextInRedRec(r + 1, c, redColor, UP, (from & (LEFT | RIGHT)), nextDeveCurvare, nextDeveAndareDritto, leftDepth - 1);
+        toSort[1] = make_pair(p, DOWN);
+    }
+    if (nextDir & LEFT)
+    {
+        int p = findNextInRedRec(r, c - 1, redColor, RIGHT, (from & (UP | DOWN)), nextDeveCurvare, nextDeveAndareDritto, leftDepth - 1);
+        toSort[2] = make_pair(p, LEFT);
+    }
+    if (nextDir & RIGHT)
+    {
+        int p = findNextInRedRec(r, c + 1, redColor, LEFT, (from & (UP | DOWN)), nextDeveCurvare, nextDeveAndareDritto, leftDepth - 1);
+        toSort[3] = make_pair(p, RIGHT);
+    }
+    sort(toSort, toSort + 4);
+    int maxPoint = toSort[3].first;
+
+    if (leftDepth == 5 && maxPoint > -1)
+    {
+        if (puntiInZonaToDo == 0)
+        {
+            cout << "GG" << endl;
+            return -2;
+        }
+        if (voidTrysLeft == 0)
+        {
+            cout << "FF" << endl;
+            return -3;
+        }
+
+        if (me & (ANELLO_BLACK | ANELLO_WHITE))
+            puntiInZonaToDo--;
+        else
+            voidTrysLeft--;
+
+        int nrUguali = 0;
+        for (int i = 0; i < 3; i++)
+            if (toSort[i].first == toSort[3].first)
+                nrUguali++;
+        //TODO: fai random;
+
+        switch (toSort[3].second)
+        {
+        case UP:
+            cout << "R: " << r - 1 << " C: " << c << "\t-> GO UP" << endl;
+            redSol[r - 1][c] = ++solI;
+            visitedTemp[r - 1][c] = true;
+            findNextInRedRec(r - 1, c, redColor, DOWN, (from & (LEFT | RIGHT)), nextDeveCurvare, nextDeveAndareDritto, leftDepth);
+            break;
+        case DOWN:
+            cout << "R: " << r + 1 << " C: " << c << "\t-> GO DOWN" << endl;
+            redSol[r + 1][c] = ++solI;
+            visitedTemp[r + 1][c] = true;
+            findNextInRedRec(r + 1, c, redColor, UP, (from & (LEFT | RIGHT)), nextDeveCurvare, nextDeveAndareDritto, leftDepth);
+            break;
+        case LEFT:
+            cout << "R: " << r << " C: " << c - 1 << "\t-> GO LEFT" << endl;
+            redSol[r][c - 1] = ++solI;
+            visitedTemp[r][c - 1] = true;
+            findNextInRedRec(r, c - 1, redColor, RIGHT, (from & (UP | DOWN)), nextDeveCurvare, nextDeveAndareDritto, leftDepth);
+            break;
+        case RIGHT:
+            cout << "R: " << r << " C: " << c + 1 << "\t-> GO RIGHT" << endl;
+            redSol[r][c + 1] = ++solI;
+            visitedTemp[r][c + 1] = true;
+            findNextInRedRec(r, c + 1, redColor, LEFT, (from & (UP | DOWN)), nextDeveCurvare, nextDeveAndareDritto, leftDepth);
+            break;
+
+        default:
+            break;
+        }
+    }
+
+    return maxPoint + point;
 }
 
 void printMat()
