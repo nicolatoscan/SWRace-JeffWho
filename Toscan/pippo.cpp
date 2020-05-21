@@ -13,7 +13,7 @@ using namespace std;
 ifstream in("input.txt");
 ofstream out("output.txt");
 #else
-ifstream in("../input/input5.txt");
+ifstream in("../input/input2.txt");
 ostream &out(cout);
 #endif
 
