@@ -25,9 +25,6 @@ using namespace std;
 
 /* ------------------------------------------ */
 
-ifstream in("../input/input1.txt");
-// ofstream out("output.txt");
-
 // Temp
 int i, j, r, c;
 
@@ -41,22 +38,35 @@ int **mat;
 int *howmany_in_row;
 int *howmany_in_col;
 
-// Quante righe e colonne sono libere
-int free_rows_count;
-int free_cols_count;
+/* ------------------------------------------ */
+
+int input = 3
+;
+
+string sfile = "input" + to_string(input) + ".txt";
+ifstream in("../input/" + sfile);
+// ofstream out("output.txt");
 
 /* ------------------------------------------ */
 
 void load(void);
+void print_stats(void);
 
 /* ------------------------------------------ */
 
 int main(void)
 {
+    cout << "FILE: \n# " + sfile << endl << endl;
+
     load();
+    print_stats();
 
     return 0;
 }
+
+/* ------------------------------------------ */
+
+
 
 /* ------------------------------------------ */
 
@@ -102,4 +112,29 @@ void load(void)
         howmany_in_row[r]++;
         howmany_in_col[c]++;
     }
+}
+
+void print_stats(void)
+{
+    int free_rows_count = 0;
+    int free_cols_count = 0;
+
+    for(int r = 0; r < R; r++)
+    {
+        if(howmany_in_row[r] == 0) free_rows_count++;
+    }
+    for(int c = 0; c < C; c++)
+    {
+        if(howmany_in_col[c] == 0) free_cols_count++;
+    }
+
+    int tot = R * C;
+    int freecount = free_rows_count*C + free_cols_count*R - free_rows_count*free_cols_count;
+    float rap = tot - freecount;
+
+    cout << "STATS:" << endl;
+    cout << "# Tot celle: " << tot << endl;
+    cout << "# Free_rows: " << free_rows_count << " su " << R << endl;
+    cout << "# Free_cols: " << free_cols_count <<  " su " << C << endl;
+    cout << "# Zone Occupate/Totale = " << rap/tot*100 << "%" << endl << endl;
 }
