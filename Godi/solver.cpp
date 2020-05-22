@@ -25,6 +25,28 @@ using namespace std;
 
 /* ------------------------------------------ */
 
+typedef struct Angoli
+{
+    int first_row;
+    int first_col;
+    int last_row;
+    int last_col;
+
+    Angoli()
+    {
+        first_row = first_col = last_row = last_col = -1;
+    }
+    Angoli(int fr, int fc, int lr, int lc)
+    {
+        first_row = fr;
+        first_col = fc;
+        last_row = lr;
+        last_col = lc;
+    }
+}Angoli;
+
+/* ------------------------------------------ */
+
 // Temp
 int i, j, r, c;
 
@@ -40,7 +62,7 @@ int *howmany_in_col;
 
 /* ------------------------------------------ */
 
-int input = 12
+int input = 1
 ;
 
 string sfile = "input" + to_string(input) + ".txt";
@@ -51,7 +73,7 @@ ifstream in("../input/" + sfile);
 
 void load(void);
 void print_stats(void);
-bool is_quadrato(void);
+Angoli* get_quadrato(void);
 
 void find_path(void);
 
@@ -64,7 +86,33 @@ int main(void)
     load();
     // print_stats();
 
-    cout << "IS QUADRATO:\n# " << (is_quadrato() ? "Yes!" : "No") << endl << endl;
+    Angoli* ang = get_quadrato();
+    cout << "IS QUADRATO:\n# " << (ang != NULL ? "Yes!" : "No") << endl << endl;
+
+    if(ang != NULL)
+    {
+        Angoli a = (*ang);
+        cout << "SOLUTION:\n# Starting Point: (R,C) (" << a.first_row << "," << a.first_col << ")\n Path: ";
+        
+        for(c = a.first_col; c < a.last_col; c++)
+        {
+            cout << "R";
+        }
+        for(r = a.first_row; r < a.last_row; r++)
+        {
+            cout << "D";
+        }
+        for(c = a.first_col; c < a.last_col; c++)
+        {
+            cout << "L";
+        }
+        for(r = a.first_row; r < a.last_row; r++)
+        {
+            cout << "U";
+        }
+
+        cout << endl << endl;
+    }
 
     return 0;
 }
@@ -147,23 +195,27 @@ void print_stats(void)
     cout << "# Zone Occupate/Totale = " << rap/tot*100 << "%" << endl << endl;
 }
 
-bool is_quadrato(void)
+Angoli* get_quadrato(void)
 {
+    Angoli* ang = new Angoli();
+
     // Righe
     r = -1;
     
     while(howmany_in_row[++r] == 0);
 
-    if(howmany_in_row[r] != 4) return false;
-    if(howmany_in_row[++r] != 2) return false;
+    if(howmany_in_row[r] != 4) return NULL;
+    ang->first_row = r;
+    if(howmany_in_row[++r] != 2) return NULL;
 
     while(howmany_in_row[++r] == 0);
 
-    if(howmany_in_row[r] != 2) return false;
-    if(howmany_in_row[++r] != 4) return false;
+    if(howmany_in_row[r] != 2) return NULL;
+    if(howmany_in_row[++r] != 4) return NULL;
+    ang->last_row = r;
 
     while(r + 1 < R && howmany_in_row[++r] == 0);
-    if(r + 1 != R) return false;
+    if(r + 1 != R) return NULL;
 
 
     // Colonne
@@ -171,16 +223,18 @@ bool is_quadrato(void)
     
     while(howmany_in_col[++c] == 0);
 
-    if(howmany_in_col[c] != 4) return false;
-    if(howmany_in_col[++c] != 2) return false;
+    if(howmany_in_col[c] != 4) return NULL;
+    ang->first_col = c;
+    if(howmany_in_col[++c] != 2) return NULL;
 
     while(howmany_in_col[++c] == 0);
 
-    if(howmany_in_col[c] != 2) return false;
-    if(howmany_in_col[++c] != 4) return false;
+    if(howmany_in_col[c] != 2) return NULL;
+    if(howmany_in_col[++c] != 4) return NULL;
+    ang->last_col = c;
 
     while(c + 1 < C && howmany_in_col[++c] == 0);
-    if(c + 1 != C) return false;
+    if(c + 1 != C) return NULL;
 
-    return true;
+    return ang;
 }
