@@ -40,7 +40,7 @@ int *howmany_in_col;
 
 /* ------------------------------------------ */
 
-int input = 3
+int input = 12
 ;
 
 string sfile = "input" + to_string(input) + ".txt";
@@ -51,22 +51,30 @@ ifstream in("../input/" + sfile);
 
 void load(void);
 void print_stats(void);
+bool is_quadrato(void);
 
-/* ------------------------------------------ */
+void find_path(void);
+
+/* ---------------------------------------------------------------------------- */
 
 int main(void)
 {
     cout << "FILE: \n# " + sfile << endl << endl;
 
     load();
-    print_stats();
+    // print_stats();
+
+    cout << "IS QUADRATO:\n# " << (is_quadrato() ? "Yes!" : "No") << endl << endl;
 
     return 0;
 }
 
-/* ------------------------------------------ */
+/* ---------------------------------------------------------------------------- */
 
+void find_path(void)
+{
 
+}
 
 /* ------------------------------------------ */
 
@@ -137,4 +145,42 @@ void print_stats(void)
     cout << "# Free_rows: " << free_rows_count << " su " << R << endl;
     cout << "# Free_cols: " << free_cols_count <<  " su " << C << endl;
     cout << "# Zone Occupate/Totale = " << rap/tot*100 << "%" << endl << endl;
+}
+
+bool is_quadrato(void)
+{
+    // Righe
+    r = -1;
+    
+    while(howmany_in_row[++r] == 0);
+
+    if(howmany_in_row[r] != 4) return false;
+    if(howmany_in_row[++r] != 2) return false;
+
+    while(howmany_in_row[++r] == 0);
+
+    if(howmany_in_row[r] != 2) return false;
+    if(howmany_in_row[++r] != 4) return false;
+
+    while(r + 1 < R && howmany_in_row[++r] == 0);
+    if(r + 1 != R) return false;
+
+
+    // Colonne
+    c = -1;
+    
+    while(howmany_in_col[++c] == 0);
+
+    if(howmany_in_col[c] != 4) return false;
+    if(howmany_in_col[++c] != 2) return false;
+
+    while(howmany_in_col[++c] == 0);
+
+    if(howmany_in_col[c] != 2) return false;
+    if(howmany_in_col[++c] != 4) return false;
+
+    while(c + 1 < C && howmany_in_col[++c] == 0);
+    if(c + 1 != C) return false;
+
+    return true;
 }
