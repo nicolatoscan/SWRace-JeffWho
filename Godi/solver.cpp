@@ -62,7 +62,7 @@ int *howmany_in_col;
 
 /* ------------------------------------------ */
 
-int input = 1
+int input = 6
 ;
 
 string sfile = "input" + to_string(input) + ".txt";
@@ -77,6 +77,8 @@ Angoli* get_quadrato(void);
 
 void find_path(void);
 
+void print_path_quadrato(Angoli a);
+
 /* ---------------------------------------------------------------------------- */
 
 int main(void)
@@ -87,32 +89,11 @@ int main(void)
     // print_stats();
 
     Angoli* ang = get_quadrato();
-    cout << "IS QUADRATO:\n# " << (ang != NULL ? "Yes!" : "No") << endl << endl;
-
     if(ang != NULL)
     {
-        Angoli a = (*ang);
-        cout << "SOLUTION:\n# Starting Point: (R,C) (" << a.first_row << "," << a.first_col << ")\n Path: ";
-        
-        for(c = a.first_col; c < a.last_col; c++)
-        {
-            cout << "R";
-        }
-        for(r = a.first_row; r < a.last_row; r++)
-        {
-            cout << "D";
-        }
-        for(c = a.first_col; c < a.last_col; c++)
-        {
-            cout << "L";
-        }
-        for(r = a.first_row; r < a.last_row; r++)
-        {
-            cout << "U";
-        }
-
-        cout << endl << endl;
+        print_path_quadrato(*ang);
     }
+
 
     return 0;
 }
@@ -197,6 +178,7 @@ void print_stats(void)
 
 Angoli* get_quadrato(void)
 {
+    if(B*2 != W) return NULL;    
     Angoli* ang = new Angoli();
 
     // Righe
@@ -237,4 +219,29 @@ Angoli* get_quadrato(void)
     if(c + 1 != C) return NULL;
 
     return ang;
+}
+
+/* ------------------------------------------ */
+
+void print_path_quadrato(Angoli a)
+{
+    cout << "SOLUTION:\n# Type: Quadrato\n# Starting Point: (R,C) (" << a.first_row << "," << a.first_col << ")\n# Path: ";
+    
+    for(c = a.first_col; c < a.last_col; c++)
+    {
+        cout << "R";
+    }
+    for(r = a.first_row; r < a.last_row; r++)
+    {
+        cout << "D";
+    }
+    for(c = a.first_col; c < a.last_col; c++)
+    {
+        cout << "L";
+    }
+    for(r = a.first_row; r < a.last_row; r++)
+    {
+        cout << "U";
+    }
+    cout << endl << endl;
 }
