@@ -133,7 +133,7 @@ void findPath(int r, int c)
     // return;
     auto res = make_pair(r, c);
 
-    for (int i = 0; i < 4; i++)
+    for (int i = 0; i < 6; i++)
     {
         res = nextRedZone(res.first, res.second, UP);
         printSol();
@@ -147,11 +147,6 @@ void findPath(int r, int c)
              << endl
              << endl;
     }
-    res = nextRedZone(res.first, res.second, UP);
-    printSol();
-    cout << res.first << " " << res.second << " - from searching red" << endl
-         << endl
-         << endl;
 }
 
 void redZone()
@@ -260,7 +255,7 @@ int findNextInRedRec(int r, int c, int redColor, int from, bool avevaCurvato, bo
         return -1;
     if (deveCurvare && deveAndareDritto)
         return -1;
-    if (red[r][c] != redColor)
+    if (redSol[r][c] != 0)
         return 0;
     if (leftDepth != 5 && visitedTemp[r][c]) // MAYBE SET
         return -1;
@@ -345,8 +340,8 @@ int findNextInRedRec(int r, int c, int redColor, int from, bool avevaCurvato, bo
         if (puntiInZonaToDo < 0)
         {
             redSol[r][c] = toSort[3].second;
-            // cout << "GG" << endl;
-            return -2;
+            if (!deveAndareDritto && !deveCurvare && !(me & ANELLO_BLACK) && !(me & ANELLO_WHITE))
+                return -2;
         }
         if (voidTrysLeft == 0)
         {
