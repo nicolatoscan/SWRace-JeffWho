@@ -26,7 +26,9 @@ void redZone();
 void unione(int *a, int x, int y);
 int find(int *a, int n);
 int findNextInRedRec(int r, int c, int redColor, int from, bool avevaCurvato, bool deveCurvare, bool deveAndareDritto, int leftDepth);
-void bfs(int r, int c);
+pair<int, int> bfs(int r, int c);
+pair<int, int> findRedZonePath(int r, int c);
+void findPath(int r, int c);
 
 struct Anello
 {
@@ -115,8 +117,9 @@ int main()
     redZone();
     //printMat();
     //int res = findNextInRedRec(8, 3, 2, LEFT, false, false, false, 5);
-    bfs(16, 16);
+    findPath(16, 16);
     printRed();
+    printNMat(redSol);
     return 0;
 }
 
@@ -208,6 +211,7 @@ void redZone()
                 red[r][c] = toFix[red[r][c]];
 
     redZonePoints = new int[nr];
+    cout << nr << endl;
     for (int i = 0; i < A; i++)
         redZonePoints[red[anelli[i].r][anelli[i].c]]++;
 }
@@ -228,16 +232,16 @@ void unione(int *a, int x, int y)
 }
 
 // ----- end RED ZONES -----
-
-void findPathInRedZone(int r, int c, int nArea)
-{
-    for (int r = 0; r < R; r++)
-        for (int c = 0; c < C; c++)
-            visitedTemp[r][c] = false;
-}
-
 int voidTrysLeft = 8;
 int puntiInZonaToDo = 6;
+pair<int, int> latestPoint;
+pair<int, int> findRedZonePath(int r, int c)
+{
+    //TODO: fix direction
+    findNextInRedRec(r, c, red[r][c], UP, false, false, false, 5);
+    redZonePoints[red[r][c]] = 0;
+    return latestPoint;
+}
 
 int findNextInRedRec(int r, int c, int redColor, int from, bool avevaCurvato, bool deveCurvare, bool deveAndareDritto, int leftDepth)
 {
@@ -334,12 +338,12 @@ int findNextInRedRec(int r, int c, int redColor, int from, bool avevaCurvato, bo
     {
         if (puntiInZonaToDo == 0)
         {
-            cout << "GG" << endl;
+            // cout << "GG" << endl;
             return -2;
         }
         if (voidTrysLeft == 0)
         {
-            cout << "FF" << endl;
+            // cout << "FF" << endl;
             return -3;
         }
 
@@ -357,27 +361,31 @@ int findNextInRedRec(int r, int c, int redColor, int from, bool avevaCurvato, bo
         switch (toSort[3].second)
         {
         case UP:
-            cout << "R: " << r - 1 << " C: " << c << "\t-> GO UP" << endl;
+            // cout << "R: " << r - 1 << " C: " << c << "\t-> GO UP" << endl;
             redSol[r - 1][c] = ++solI;
             visitedTemp[r - 1][c] = true;
+            latestPoint = make_pair(r - 1, c);
             findNextInRedRec(r - 1, c, redColor, DOWN, (from & (LEFT | RIGHT)), nextDeveCurvare, nextDeveAndareDritto, leftDepth);
             break;
         case DOWN:
-            cout << "R: " << r + 1 << " C: " << c << "\t-> GO DOWN" << endl;
+            // cout << "R: " << r + 1 << " C: " << c << "\t-> GO DOWN" << endl;
             redSol[r + 1][c] = ++solI;
             visitedTemp[r + 1][c] = true;
+            latestPoint = make_pair(r + 1, c);
             findNextInRedRec(r + 1, c, redColor, UP, (from & (LEFT | RIGHT)), nextDeveCurvare, nextDeveAndareDritto, leftDepth);
             break;
         case LEFT:
-            cout << "R: " << r << " C: " << c - 1 << "\t-> GO LEFT" << endl;
+            // cout << "R: " << r << " C: " << c - 1 << "\t-> GO LEFT" << endl;
             redSol[r][c - 1] = ++solI;
             visitedTemp[r][c - 1] = true;
+            latestPoint = make_pair(r, c - 1);
             findNextInRedRec(r, c - 1, redColor, RIGHT, (from & (UP | DOWN)), nextDeveCurvare, nextDeveAndareDritto, leftDepth);
             break;
         case RIGHT:
-            cout << "R: " << r << " C: " << c + 1 << "\t-> GO RIGHT" << endl;
+            // cout << "R: " << r << " C: " << c + 1 << "\t-> GO RIGHT" << endl;
             redSol[r][c + 1] = ++solI;
             visitedTemp[r][c + 1] = true;
+            latestPoint = make_pair(r, c + 1);
             findNextInRedRec(r, c + 1, redColor, LEFT, (from & (UP | DOWN)), nextDeveCurvare, nextDeveAndareDritto, leftDepth);
             break;
 
@@ -389,16 +397,25 @@ int findNextInRedRec(int r, int c, int redColor, int from, bool avevaCurvato, bo
     return maxPoint + point;
 }
 
-void bfs(int r, int c)
+pair<int, int> bfs(int r, int c)
 {
+    int orR = r, orC = c;
+
     for (int rr = 0; rr < R; rr++)
+    {
         for (int cc = 0; cc < C; cc++)
-            from[rr][cc] = 0;
+        {
+            int col = red[rr][cc];
+            if (col >= 0)
+                from[rr][cc] = redZonePoints[col] > 0 ? 0 : -1; //TODO: mettere le cose che non devo guardare inbfs
+        }
+    }
 
     queue<pair<int, int>> q;
     q.push(make_pair(r, c));
     int colorFound;
-    from[r][c] = UP; //FIX
+    from[r][c] = UP; //TODO: fix
+    pair<int, int> res;
 
     while (!q.empty())
     {
@@ -408,8 +425,11 @@ void bfs(int r, int c)
         q.pop();
 
         colorFound = red[r][c];
-        if (colorFound >= 0)
+        if (colorFound >= 0 && redZonePoints[colorFound] > 0)
+        {
+            res = make_pair(r, c);
             break;
+        }
 
         if (r > 0 && (from[r - 1][c] == 0))
         {
@@ -432,54 +452,50 @@ void bfs(int r, int c)
             q.push(make_pair(r, c + 1));
         }
     }
-    cout << " R: " << r << " C: " << c << " COLOR: " << colorFound << endl;
 
-    for (int rr = 0; rr < R; rr++)
-    {
-        for (int cc = 0; cc < C; cc++)
-            if (from[rr][cc] == UP)
-                cout << " U ";
-            else if (from[rr][cc] == RIGHT)
-                cout << " R ";
-            else if (from[rr][cc] == LEFT)
-                cout << " L ";
-            else if (from[rr][cc] == DOWN)
-                cout << " D ";
-            else
-                cout << " - ";
-        cout << endl;
-    }
-    cout << endl;
-    cout << endl;
-    return;
-
+    printNMat(redSol);
     int nextDir;
+    int i = 0;
     do
     {
         nextDir = from[r][c];
+        redSol[r][c] = i++;
         switch (nextDir)
         {
         case UP:
-            cout << "UP" << endl;
+            // cout << "UP" << endl;
             r--;
             break;
         case DOWN:
-            cout << "DOWN" << endl;
+            // cout << "DOWN" << endl;
             r++;
             break;
         case LEFT:
-            cout << "LEFT" << endl;
+            // cout << "LEFT" << endl;
             c--;
             break;
         case RIGHT:
-            cout << "RIGHT" << endl;
+            // cout << "RIGHT" << endl;
             c++;
             break;
 
         default:
             break;
         }
-    } while (nextDir != 0);
+    } while (r != orR || c != orC);
+
+    return res;
+}
+
+void findPath(int r, int c)
+{
+    auto from = make_pair(r, c);
+    for (int i = 0; i < 5; i++)
+    {
+        auto res = bfs(from.first, from.second);
+        from = findRedZonePath(res.first, res.second);
+        cout << from.first << from.second << endl;
+    }
 }
 
 void printMat()
@@ -508,7 +524,7 @@ void printNMat(int **mat)
         for (int c = 0; c < C; c++)
         {
             int n = mat[r][c];
-            if (n >= 0)
+            if (n > 0)
                 cout << "\033[31m";
             if (n < 10 && n >= 0)
                 cout << " " << n << " ";
