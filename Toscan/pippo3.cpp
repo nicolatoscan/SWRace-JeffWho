@@ -26,7 +26,7 @@ bool findPath(int r, int c);
 void printSol();
 string printDir(int dir);
 void partiDappertutto();
-void printSolCorrector(int r, int c);
+bool printSolCorrector(int r, int c);
 
 struct Anello
 {
@@ -162,8 +162,8 @@ void partiDappertutto()
                     currentPointCounter *= 2;
                 if (currentPointCounter > maxPointEver)
                 {
-                    maxPointEver = currentPointCounter;
-                    printSolCorrector(r, c);
+                    if (printSolCorrector(r, c))
+                        maxPointEver = currentPointCounter;
                     //printSol();
                 }
             }
@@ -802,8 +802,16 @@ void printRed()
 }
 
 int maxPuntiVeri = 0;
-void printSolCorrector(int r, int c)
+bool printSolCorrector(int r, int c)
 {
+    // CHECKER
+    int prevDir = 0;
+    int prevPrevDir = 0;
+    bool nextDeveAndareDritto = false;
+    bool nextDeveCurvare = false;
+    bool errore = false;
+    // end CHECKER
+
     //printSol();
     int stR = r, stC = c;
     stringstream ss;
@@ -811,10 +819,58 @@ void printSolCorrector(int r, int c)
     int d = redSol[r][c];
     int punti = 0;
     bool closed = false;
+
     do
     {
-        if ((mat[r][c] & (ANELLO_BLACK | ANELLO_WHITE)) > 0)
+
+        int me = mat[r][c];
+        if (nextDeveAndareDritto && nextDeveCurvare)
+        {
+            errore = true;
+            break;
+        }
+        if (nextDeveAndareDritto)
+        {
+            if (d != prevDir)
+            {
+                errore = true;
+                break;
+            }
+        }
+        if (nextDeveCurvare)
+        {
+            if (d == prevDir)
+            {
+                errore = true;
+                break;
+            }
+        }
+        nextDeveAndareDritto = false;
+        nextDeveCurvare = false;
+
+        if ((me & (ANELLO_BLACK | ANELLO_WHITE)) > 0)
+        {
             punti++;
+            if (me & ANELLO_BLACK)
+            {
+                if (!(d != prevDir && prevDir == prevPrevDir))
+                {
+                    errore = true;
+                    break;
+                }
+                nextDeveAndareDritto = true;
+            }
+            else if (me & ANELLO_WHITE)
+            {
+                if (d != prevDir)
+                {
+                    errore = true;
+                    break;
+                }
+                if (prevDir == prevPrevDir)
+                    nextDeveCurvare = true;
+            }
+        }
 
         switch (d)
         {
@@ -839,20 +895,28 @@ void printSolCorrector(int r, int c)
             break;
         }
         i++;
+
+        prevPrevDir = prevDir;
+        prevDir = d;
         d = redSol[r][c];
         if (r == stR && c == stC)
         {
             closed = true;
             d = -1;
         }
+
     } while (d > 0);
+
+    if (errore || nextDeveAndareDritto || nextDeveCurvare)
+        return false;
+
     ss << "#";
 
     int anelli = punti;
 
     if (closed)
         punti *= 2;
-    
+
     if (punti > maxPuntiVeri)
     {
         out << anelli << " "
@@ -861,4 +925,6 @@ void printSolCorrector(int r, int c)
             << stC << " "
             << ss.str() << endl;
     }
+
+    return true;
 }
