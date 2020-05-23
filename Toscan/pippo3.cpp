@@ -69,6 +69,7 @@ ostream &out(cout);
 
 int main()
 {
+    srand(time(NULL));
     in >> R >> C;
     in >> B >> W;
     A = B + W;
@@ -356,33 +357,36 @@ int findNextInRedRec(int r, int c, int color, int from, bool avevaCurvato, bool 
     }
 
     pair<int, int> *toSort = new pair<int, int>[4];
+    int nrOfPossibility = 0;
     if (nextDir & UP)
     {
         int p = findNextInRedRec(r - 1, c, color, DOWN, (from & (LEFT | RIGHT)), nextDeveCurvare, nextDeveAndareDritto, leftDepth - 1);
-        toSort[0] = make_pair(p, UP);
+        toSort[nrOfPossibility++] = make_pair(p, UP);
     }
     if (nextDir & DOWN)
     {
         int p = findNextInRedRec(r + 1, c, color, UP, (from & (LEFT | RIGHT)), nextDeveCurvare, nextDeveAndareDritto, leftDepth - 1);
-        toSort[1] = make_pair(p, DOWN);
+        toSort[nrOfPossibility++] = make_pair(p, DOWN);
     }
     if (nextDir & LEFT)
     {
         int p = findNextInRedRec(r, c - 1, color, RIGHT, (from & (UP | DOWN)), nextDeveCurvare, nextDeveAndareDritto, leftDepth - 1);
-        toSort[2] = make_pair(p, LEFT);
+        toSort[nrOfPossibility++] = make_pair(p, LEFT);
     }
     if (nextDir & RIGHT)
     {
         int p = findNextInRedRec(r, c + 1, color, LEFT, (from & (UP | DOWN)), nextDeveCurvare, nextDeveAndareDritto, leftDepth - 1);
-        toSort[3] = make_pair(p, RIGHT);
+        toSort[nrOfPossibility++] = make_pair(p, RIGHT);
     }
-    sort(toSort, toSort + 4);
-    int maxPoint = toSort[3].first;
+    sort(toSort, toSort + nrOfPossibility);
+    if (nrOfPossibility == 0)
+        return -1;
+    int maxPoint = toSort[nrOfPossibility - 1].first;
 
     if (leftDepth == 5 && maxPoint > -1)
     {
         //GO DRITTO SE SI PUO
-        int puntiDritti = -1;
+        bool goingDritto = false;
         int nextDefDir = 0;
         if (from == DOWN)
             nextDefDir = UP;
@@ -393,15 +397,16 @@ int findNextInRedRec(int r, int c, int color, int from, bool avevaCurvato, bool 
         else if (from == RIGHT)
             nextDefDir = LEFT;
 
-        for (int i = 0; i < 4; i++)
+        for (int i = 0; i < nrOfPossibility; i++)
         {
             if (toSort[i].second == nextDefDir)
             {
-                if (toSort[i].first == toSort[3].first)
+                if (toSort[i].first == toSort[nrOfPossibility - 1].first)
                 {
                     auto temp = toSort[i];
-                    toSort[i] = toSort[3];
-                    toSort[3] = temp;
+                    toSort[i] = toSort[nrOfPossibility - 1];
+                    toSort[nrOfPossibility - 1] = temp;
+                    goingDritto = true;
                 }
             }
         }
@@ -411,7 +416,7 @@ int findNextInRedRec(int r, int c, int color, int from, bool avevaCurvato, bool 
 
         if (puntiInZonaToDo < 0)
         {
-            redSol[r][c] = toSort[3].second;
+            redSol[r][c] = toSort[nrOfPossibility - 1].second;
             if (!deveAndareDritto && !deveCurvare && !(me & ANELLO_BLACK) && !(me & ANELLO_WHITE))
                 return -2;
         }
@@ -429,18 +434,26 @@ int findNextInRedRec(int r, int c, int color, int from, bool avevaCurvato, bool 
         else
             voidTrysLeft--;
 
-        int nrUguali = 0;
-        for (int i = 0; i < 3; i++)
-            if (toSort[i].first == toSort[3].first)
-                nrUguali++;
-        //TODO: fai random;
-
-        if (r == 42 && c == 25)
+        //Fai random;
+        if (!goingDritto)
         {
-            cout << "---------------- CIAO " << puntiInZonaToDo << " DIR " << toSort[3].second << endl;
+            int nrUguali = 0;
+            for (int i = 0; i < nrOfPossibility; i++)
+                if (toSort[i].first == toSort[nrOfPossibility - 1].first)
+                    nrUguali++;
+            if (nrUguali > 1)
+            {
+                int randomN = (rand() % nrUguali);
+                cout << "Rand R: " << r << " C: " << c << " N: " << randomN << endl;
+                for (int i = 0; i < nrOfPossibility; i++)
+                    cout << " --- " << toSort[i].first << " - " << toSort[i].second << endl;
+                auto temp = toSort[nrOfPossibility - randomN];
+                toSort[nrOfPossibility - randomN] = toSort[nrOfPossibility - 1];
+                toSort[nrOfPossibility - 1] = temp;
+            }
         }
 
-        switch (toSort[3].second)
+        switch (toSort[nrOfPossibility - 1].second)
         {
         case UP:
             // cout << "R: " << r - 1 << " C: " << c << "\t-> GO UP" << endl;
@@ -454,11 +467,6 @@ int findNextInRedRec(int r, int c, int color, int from, bool avevaCurvato, bool 
             redSol[r][c] = DOWN;
             visitedTemp[r + 1][c] = true;
             latestPoint = make_pair(r + 1, c);
-            if (r == 42 && c == 25)
-            {
-                cout << "---------------- CIAO " << puntiInZonaToDo << " DIR " << toSort[3].second << endl;
-            }
-
             findNextInRedRec(r + 1, c, color, UP, (from & (LEFT | RIGHT)), nextDeveCurvare, nextDeveAndareDritto, leftDepth);
             break;
         case LEFT:
