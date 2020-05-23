@@ -14,7 +14,7 @@ using namespace std;
 ifstream in("input.txt");
 ofstream out("output.txt");
 #else
-ifstream in("../input/input6.txt");
+ifstream in("../input/input4.txt");
 ostream &out(cout);
 #endif
 
@@ -25,7 +25,7 @@ void printNMat(int **mat);
 void redZone();
 void unione(int *a, int x, int y);
 int find(int *a, int n);
-int findNextInRedRec(int r, int c, int redColor, int from, bool avevaCurvato, bool deveCurvare, bool deveAndareDritto, int leftDepth);
+int findNextInRedRec(int r, int c, int from, bool avevaCurvato, bool deveCurvare, bool deveAndareDritto, int leftDepth);
 pair<int, int> nextRedZone(int r, int c, bool findStart, int rStart, int cStart);
 pair<int, int> findRedZonePath(int r, int c);
 void findPath(int r, int c);
@@ -258,15 +258,19 @@ pair<int, int> latestPoint;
 pair<int, int> findRedZonePath(int r, int c)
 {
     voidTrysLeft = 8;
+    int dir = redSol[r][c];
+    //SITEMA QUESTO PERCHE ORA VA ANCHE FUORI DA LA
+    //PROVARE AD IMPLEMENTARE UN CLEAR RED ZONE
     puntiInZonaToDo = redZonePoints[red[r][c]];
 
     //TODO: fix direction
+    latestPoint = make_pair(-1, -1);
     findNextInRedRec(r, c, red[r][c], DOWN, false, false, false, 5);
     redZonePoints[red[r][c]] = -1;
     return latestPoint;
 }
 
-int findNextInRedRec(int r, int c, int redColor, int from, bool avevaCurvato, bool deveCurvare, bool deveAndareDritto, int leftDepth)
+int findNextInRedRec(int r, int c, int from, bool avevaCurvato, bool deveCurvare, bool deveAndareDritto, int leftDepth)
 {
     int point = 0;
     if (r < 0 || r >= R || c < 0 || c >= C)
@@ -332,22 +336,22 @@ int findNextInRedRec(int r, int c, int redColor, int from, bool avevaCurvato, bo
     pair<int, int> *toSort = new pair<int, int>[4];
     if (nextDir & UP)
     {
-        int p = findNextInRedRec(r - 1, c, redColor, DOWN, (from & (LEFT | RIGHT)), nextDeveCurvare, nextDeveAndareDritto, leftDepth - 1);
+        int p = findNextInRedRec(r - 1, c, DOWN, (from & (LEFT | RIGHT)), nextDeveCurvare, nextDeveAndareDritto, leftDepth - 1);
         toSort[0] = make_pair(p, UP);
     }
     if (nextDir & DOWN)
     {
-        int p = findNextInRedRec(r + 1, c, redColor, UP, (from & (LEFT | RIGHT)), nextDeveCurvare, nextDeveAndareDritto, leftDepth - 1);
+        int p = findNextInRedRec(r + 1, c, UP, (from & (LEFT | RIGHT)), nextDeveCurvare, nextDeveAndareDritto, leftDepth - 1);
         toSort[1] = make_pair(p, DOWN);
     }
     if (nextDir & LEFT)
     {
-        int p = findNextInRedRec(r, c - 1, redColor, RIGHT, (from & (UP | DOWN)), nextDeveCurvare, nextDeveAndareDritto, leftDepth - 1);
+        int p = findNextInRedRec(r, c - 1, RIGHT, (from & (UP | DOWN)), nextDeveCurvare, nextDeveAndareDritto, leftDepth - 1);
         toSort[2] = make_pair(p, LEFT);
     }
     if (nextDir & RIGHT)
     {
-        int p = findNextInRedRec(r, c + 1, redColor, LEFT, (from & (UP | DOWN)), nextDeveCurvare, nextDeveAndareDritto, leftDepth - 1);
+        int p = findNextInRedRec(r, c + 1, LEFT, (from & (UP | DOWN)), nextDeveCurvare, nextDeveAndareDritto, leftDepth - 1);
         toSort[3] = make_pair(p, RIGHT);
     }
     sort(toSort, toSort + 4);
@@ -355,6 +359,9 @@ int findNextInRedRec(int r, int c, int redColor, int from, bool avevaCurvato, bo
 
     if (leftDepth == 5 && maxPoint > -1)
     {
+        if (puntiInZonaToDo == 0)
+            puntiInZonaToDo--;
+
         if (puntiInZonaToDo < 0)
         {
             redSol[r][c] = toSort[3].second;
@@ -385,28 +392,28 @@ int findNextInRedRec(int r, int c, int redColor, int from, bool avevaCurvato, bo
             redSol[r][c] = UP;
             visitedTemp[r - 1][c] = true;
             latestPoint = make_pair(r - 1, c);
-            findNextInRedRec(r - 1, c, redColor, DOWN, (from & (LEFT | RIGHT)), nextDeveCurvare, nextDeveAndareDritto, leftDepth);
+            findNextInRedRec(r - 1, c, DOWN, (from & (LEFT | RIGHT)), nextDeveCurvare, nextDeveAndareDritto, leftDepth);
             break;
         case DOWN:
             // cout << "R: " << r + 1 << " C: " << c << "\t-> GO DOWN" << endl;
             redSol[r][c] = DOWN;
             visitedTemp[r + 1][c] = true;
             latestPoint = make_pair(r + 1, c);
-            findNextInRedRec(r + 1, c, redColor, UP, (from & (LEFT | RIGHT)), nextDeveCurvare, nextDeveAndareDritto, leftDepth);
+            findNextInRedRec(r + 1, c, UP, (from & (LEFT | RIGHT)), nextDeveCurvare, nextDeveAndareDritto, leftDepth);
             break;
         case LEFT:
             // cout << "R: " << r << " C: " << c - 1 << "\t-> GO LEFT" << endl;
             redSol[r][c] = LEFT;
             visitedTemp[r][c - 1] = true;
             latestPoint = make_pair(r, c - 1);
-            findNextInRedRec(r, c - 1, redColor, RIGHT, (from & (UP | DOWN)), nextDeveCurvare, nextDeveAndareDritto, leftDepth);
+            findNextInRedRec(r, c - 1, RIGHT, (from & (UP | DOWN)), nextDeveCurvare, nextDeveAndareDritto, leftDepth);
             break;
         case RIGHT:
             // cout << "R: " << r << " C: " << c + 1 << "\t-> GO RIGHT" << endl;
             redSol[r][c] = RIGHT;
             visitedTemp[r][c + 1] = true;
             latestPoint = make_pair(r, c + 1);
-            findNextInRedRec(r, c + 1, redColor, LEFT, (from & (UP | DOWN)), nextDeveCurvare, nextDeveAndareDritto, leftDepth);
+            findNextInRedRec(r, c + 1, LEFT, (from & (UP | DOWN)), nextDeveCurvare, nextDeveAndareDritto, leftDepth);
             break;
 
         default:
@@ -484,9 +491,20 @@ pair<int, int> nextRedZone(int r, int c, bool findStart, int rStart, int cStart)
     }
     if (!found) //NON TROVATO
         return make_pair(-1, -1);
+    cout << "RES: " << r << " " << c << endl;
+
+    //DELETE LAST PERCHE FORSE FUNZIONA MEGLIO BOH NON SO
+    int last = visited[res.first][res.second];
+    if (last == UP)
+        res.first--;
+    else if (last == DOWN)
+        res.first++;
+    else if (last == LEFT)
+        res.second--;
+    else if (last == RIGHT)
+        res.second++;
 
     int nextDir;
-    int i = 0;
     do
     {
         nextDir = visited[r][c];
