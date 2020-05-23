@@ -809,8 +809,11 @@ void printSolCorrector(int r, int c, int anelli)
     stringstream ss;
     int i = 0;
     int d = redSol[r][c];
+    anelli = 0;
     do
     {
+        if ((mat[r][c] & (ANELLO_BLACK | ANELLO_WHITE)) > 0)
+            anelli++;
         switch (d)
         {
         case UP:
