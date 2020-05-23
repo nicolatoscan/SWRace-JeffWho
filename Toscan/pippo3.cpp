@@ -8,7 +8,7 @@
 #include <queue>
 #include <set>
 #include <sstream>
-#include "swrace.h"
+//#include "swrace.h"
 
 using namespace std;
 
@@ -26,7 +26,7 @@ bool findPath(int r, int c);
 void printSol();
 string printDir(int dir);
 void partiDappertutto();
-void printSolCorrector(int r, int c, int anelli);
+void printSolCorrector(int r, int c);
 
 struct Anello
 {
@@ -158,13 +158,12 @@ void partiDappertutto()
                 int isClosed = findPath(r, c);
                 //cout << "R: " << r << " C: " << c << " POINTS: " << currentPointCounter << endl;
 
-                int anelli = currentPointCounter;
                 if (isClosed)
                     currentPointCounter *= 2;
                 if (currentPointCounter > maxPointEver)
                 {
                     maxPointEver = currentPointCounter;
-                    printSolCorrector(r, c, anelli);
+                    printSolCorrector(r, c);
                     //printSol();
                 }
             }
@@ -802,18 +801,21 @@ void printRed()
     cout << endl;
 }
 
-void printSolCorrector(int r, int c, int anelli)
+int maxPuntiVeri = 0;
+void printSolCorrector(int r, int c)
 {
     //printSol();
     int stR = r, stC = c;
     stringstream ss;
     int i = 0;
     int d = redSol[r][c];
-    anelli = 0;
+    int punti = 0;
+    bool closed = false;
     do
     {
         if ((mat[r][c] & (ANELLO_BLACK | ANELLO_WHITE)) > 0)
-            anelli++;
+            punti++;
+
         switch (d)
         {
         case UP:
@@ -839,13 +841,24 @@ void printSolCorrector(int r, int c, int anelli)
         i++;
         d = redSol[r][c];
         if (r == stR && c == stC)
+        {
+            closed = true;
             d = -1;
+        }
     } while (d > 0);
     ss << "#";
 
-    out << anelli << " "
-        << i << " "
-        << stR << " "
-        << stC << " "
-        << ss.str() << endl;
+    int anelli = punti;
+
+    if (closed)
+        punti *= 2;
+    
+    if (punti > maxPuntiVeri)
+    {
+        out << anelli << " "
+            << i << " "
+            << stR << " "
+            << stC << " "
+            << ss.str() << endl;
+    }
 }
