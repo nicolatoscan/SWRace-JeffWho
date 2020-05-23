@@ -14,7 +14,7 @@ using namespace std;
 ifstream in("input.txt");
 ofstream out("output.txt");
 #else
-ifstream in("../input/input8.txt");
+ifstream in("../input/input6.txt");
 ostream &out(cout);
 #endif
 
@@ -26,7 +26,7 @@ void redZone();
 void unione(int *a, int x, int y);
 int find(int *a, int n);
 int findNextInRedRec(int r, int c, int redColor, int from, bool avevaCurvato, bool deveCurvare, bool deveAndareDritto, int leftDepth);
-pair<int, int> nextRedZone(int r, int c, int startingDir);
+pair<int, int> nextRedZone(int r, int c, bool findStart, int rStart, int cStart);
 pair<int, int> findRedZonePath(int r, int c);
 void findPath(int r, int c);
 void printSol();
@@ -116,7 +116,7 @@ int main()
     redZone();
 
     printRed();
-    findPath(0, 0);
+    findPath(1, 9);
     printRed();
 
     //printNMat(redSol);
@@ -131,22 +131,40 @@ void findPath(int r, int c)
     //      << endl
     //      << endl;
     // return;
-    auto res = make_pair(r, c);
+    auto next = make_pair(r, c);
+    auto res = next;
+    int startR = r, startC = c;
 
-    for (int i = 0; i < 6; i++)
+    while (res.first != -1 && res.second != -1)
     {
-        res = nextRedZone(res.first, res.second, UP);
+        res = nextRedZone(next.first, next.second, false, -1, -1);
         printSol();
         cout << res.first << " " << res.second << " - from searching red" << endl
              << endl
              << endl;
 
-        res = findRedZonePath(res.first, res.second);
+        if (res.first != -1 && res.second != -1)
+            next = res;
+        else
+            continue;
+
+        res = findRedZonePath(next.first, next.second);
         printSol();
         cout << res.first << " " << res.second << " - from red zone" << endl
              << endl
              << endl;
+        if (res.first != -1 && res.second != -1)
+            next = res;
     }
+    int backUp = redSol[startR][startC];
+    redSol[startR][startC] = 0;
+    res = nextRedZone(next.first, next.second, true, startR, startC);
+    redSol[startR][startC] = backUp;
+    printSol();
+    cout << next.first << " " << next.second << " - FROM ENDING" << endl;
+    cout << res.first << " " << res.second << " - FROM ENDING" << endl
+         << endl
+         << endl;
 }
 
 void redZone()
@@ -240,7 +258,7 @@ pair<int, int> latestPoint;
 pair<int, int> findRedZonePath(int r, int c)
 {
     voidTrysLeft = 8;
-    puntiInZonaToDo = 6;
+    puntiInZonaToDo = redZonePoints[red[r][c]];
 
     //TODO: fix direction
     findNextInRedRec(r, c, red[r][c], DOWN, false, false, false, 5);
@@ -399,7 +417,7 @@ int findNextInRedRec(int r, int c, int redColor, int from, bool avevaCurvato, bo
     return maxPoint + point;
 }
 
-pair<int, int> nextRedZone(int r, int c, int startingDir)
+pair<int, int> nextRedZone(int r, int c, bool findStart, int rStart, int cStart)
 {
     if (red[r][c] && redZonePoints[red[r][c]] > 0)
         return make_pair(r, c);
@@ -422,8 +440,9 @@ pair<int, int> nextRedZone(int r, int c, int startingDir)
     queue<pair<int, int>> q;
     q.push(make_pair(r, c));
     int colorFound;
-    visited[r][c] = startingDir; //TODO: fix
+    visited[r][c] = UP; //TODO: fix
     pair<int, int> res;
+    bool found = false;
 
     while (!q.empty())
     {
@@ -433,9 +452,12 @@ pair<int, int> nextRedZone(int r, int c, int startingDir)
         q.pop();
 
         colorFound = red[r][c];
-        if (colorFound >= 0 && redZonePoints[colorFound] > 0)
+        if (
+            (colorFound >= 0 && redZonePoints[colorFound] > 0) ||
+            (findStart && ((r == rStart && c == cStart))))
         {
             res = make_pair(r, c);
+            found = true;
             break;
         }
 
@@ -460,7 +482,7 @@ pair<int, int> nextRedZone(int r, int c, int startingDir)
             q.push(make_pair(r, c + 1));
         }
     }
-    if (q.empty()) //NON TROVATO
+    if (!found) //NON TROVATO
         return make_pair(-1, -1);
 
     int nextDir;
