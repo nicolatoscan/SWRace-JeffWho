@@ -43,6 +43,8 @@ struct Anello
 #define LEFT 4
 #define RIGHT 8
 
+#define VOID_TRYES 8
+
 int R, C;
 int W, B;
 int A;
@@ -63,7 +65,7 @@ Anello *anelli;
 ifstream in("input.txt");
 ofstream out("output.txt");
 #else
-ifstream in("../input/input9.txt");
+ifstream in("../input/input13.txt");
 ostream &out(cout);
 #endif
 
@@ -117,7 +119,7 @@ int main()
     redZone();
 
     printRed();
-    findPath(35, 6);
+    findPath(7, 7);
     printRed();
 
     //printNMat(redSol);
@@ -126,12 +128,6 @@ int main()
 
 void findPath(int r, int c)
 {
-    // auto dd = findRedZonePath(5, 18);
-    // printSol();
-    // cout << dd.first << " " << dd.second << endl
-    //      << endl
-    //      << endl;
-    // return;
     auto next = make_pair(r, c);
     auto res = next;
     int startR = r, startC = c;
@@ -246,12 +242,12 @@ void redZone()
         redZonePoints[red[anelli[i].r][anelli[i].c]]++;
 }
 
-int voidTrysLeft = 8;
+int voidTrysLeft = VOID_TRYES;
 int puntiInZonaToDo = 6;
 pair<int, int> latestPoint;
 pair<int, int> findRedZonePath(int r, int c)
 {
-    voidTrysLeft = 8;
+    voidTrysLeft = VOID_TRYES;
     int dir = redSol[r][c];
     //SITEMA QUESTO PERCHE ORA VA ANCHE FUORI DA LA
     //PROVARE AD IMPLEMENTARE UN CLEAR RED ZONE
@@ -417,8 +413,8 @@ int findNextInRedRec(int r, int c, int color, int from, bool avevaCurvato, bool 
         if (puntiInZonaToDo < 0)
         {
             redSol[r][c] = toSort[nrOfPossibility - 1].second;
-            if (!deveAndareDritto && !deveCurvare && !(me & ANELLO_BLACK) && !(me & ANELLO_WHITE))
-                return -2;
+            if (!deveAndareDritto && !deveCurvare)
+                return 0;
         }
         if (voidTrysLeft == 0)
         {
@@ -428,7 +424,7 @@ int findNextInRedRec(int r, int c, int color, int from, bool avevaCurvato, bool 
 
         if (me & (ANELLO_BLACK | ANELLO_WHITE))
         {
-            voidTrysLeft = 8;
+            voidTrysLeft = VOID_TRYES;
             puntiInZonaToDo--;
         }
         else
@@ -444,11 +440,8 @@ int findNextInRedRec(int r, int c, int color, int from, bool avevaCurvato, bool 
             if (nrUguali > 1)
             {
                 int randomN = (rand() % nrUguali);
-                cout << "Rand R: " << r << " C: " << c << " N: " << randomN << endl;
-                for (int i = 0; i < nrOfPossibility; i++)
-                    cout << " --- " << toSort[i].first << " - " << toSort[i].second << endl;
-                auto temp = toSort[nrOfPossibility - randomN];
-                toSort[nrOfPossibility - randomN] = toSort[nrOfPossibility - 1];
+                auto temp = toSort[nrOfPossibility - randomN - 1];
+                toSort[nrOfPossibility - randomN - 1] = toSort[nrOfPossibility - 1];
                 toSort[nrOfPossibility - 1] = temp;
             }
         }
@@ -460,28 +453,28 @@ int findNextInRedRec(int r, int c, int color, int from, bool avevaCurvato, bool 
             redSol[r][c] = UP;
             visitedTemp[r - 1][c] = true;
             latestPoint = make_pair(r - 1, c);
-            findNextInRedRec(r - 1, c, color, DOWN, (from & (LEFT | RIGHT)), nextDeveCurvare, nextDeveAndareDritto, leftDepth);
+            return findNextInRedRec(r - 1, c, color, DOWN, (from & (LEFT | RIGHT)), nextDeveCurvare, nextDeveAndareDritto, leftDepth);
             break;
         case DOWN:
             // cout << "R: " << r + 1 << " C: " << c << "\t-> GO DOWN" << endl;
             redSol[r][c] = DOWN;
             visitedTemp[r + 1][c] = true;
             latestPoint = make_pair(r + 1, c);
-            findNextInRedRec(r + 1, c, color, UP, (from & (LEFT | RIGHT)), nextDeveCurvare, nextDeveAndareDritto, leftDepth);
+            return findNextInRedRec(r + 1, c, color, UP, (from & (LEFT | RIGHT)), nextDeveCurvare, nextDeveAndareDritto, leftDepth);
             break;
         case LEFT:
             // cout << "R: " << r << " C: " << c - 1 << "\t-> GO LEFT" << endl;
             redSol[r][c] = LEFT;
             visitedTemp[r][c - 1] = true;
             latestPoint = make_pair(r, c - 1);
-            findNextInRedRec(r, c - 1, color, RIGHT, (from & (UP | DOWN)), nextDeveCurvare, nextDeveAndareDritto, leftDepth);
+            return findNextInRedRec(r, c - 1, color, RIGHT, (from & (UP | DOWN)), nextDeveCurvare, nextDeveAndareDritto, leftDepth);
             break;
         case RIGHT:
             // cout << "R: " << r << " C: " << c + 1 << "\t-> GO RIGHT" << endl;
             redSol[r][c] = RIGHT;
             visitedTemp[r][c + 1] = true;
             latestPoint = make_pair(r, c + 1);
-            findNextInRedRec(r, c + 1, color, LEFT, (from & (UP | DOWN)), nextDeveCurvare, nextDeveAndareDritto, leftDepth);
+            return findNextInRedRec(r, c + 1, color, LEFT, (from & (UP | DOWN)), nextDeveCurvare, nextDeveAndareDritto, leftDepth);
             break;
 
         default:
