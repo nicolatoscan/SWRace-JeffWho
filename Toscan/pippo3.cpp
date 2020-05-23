@@ -7,6 +7,8 @@
 #include <ctime>
 #include <queue>
 #include <set>
+#include <sstream>
+#include "swrace.h"
 
 using namespace std;
 
@@ -20,9 +22,11 @@ int find(int *a, int n);
 int findNextInRedRec(int r, int c, int color, int from, bool avevaCurvato, bool deveCurvare, bool deveAndareDritto, int leftDepth);
 pair<int, int> nextRedZone(int r, int c, bool findStart, int rStart, int cStart);
 pair<int, int> findRedZonePath(int r, int c);
-void findPath(int r, int c);
+bool findPath(int r, int c);
 void printSol();
 string printDir(int dir);
+void partiDappertutto();
+void printSolCorrector(int r, int c, int anelli);
 
 struct Anello
 {
@@ -57,8 +61,9 @@ int solI = 0;
 //int **maxFromHotsot; //TODO: sdfg
 
 int *redZonePoints;
+int *redZonePointsOr;
+int redZonePointLenght;
 int *sol;
-
 Anello *anelli;
 
 #ifdef EVAL
@@ -68,6 +73,8 @@ ofstream out("output.txt");
 ifstream in("../input/input13.txt");
 ostream &out(cout);
 #endif
+
+int currentPointCounter = 0;
 
 int main()
 {
@@ -117,16 +124,55 @@ int main()
     }
 
     redZone();
-
-    printRed();
-    findPath(7, 7);
-    printRed();
+    while (true)
+        partiDappertutto();
+    //printRed();
 
     //printNMat(redSol);
     return 0;
 }
+int maxPointEver = 0;
+void partiDappertutto()
+{
+    for (int r = 0; r < R; r++)
+    {
+        for (int c = 0; c < C; c++)
+        {
+            if (red[r][c] < 0)
+            {
+                //RESET
+                for (int r = 0; r < R; r++)
+                {
+                    for (int c = 0; c < C; c++)
+                    {
+                        visited[r][c] = 0;
+                        redSol[r][c] = 0;
+                        visitedTemp[r][c] = false;
+                    }
+                }
 
-void findPath(int r, int c)
+                for (int i = 0; i < redZonePointLenght; i++)
+                    redZonePoints[i] = redZonePointsOr[i];
+
+                currentPointCounter = 0;
+                int isClosed = findPath(r, c);
+                //cout << "R: " << r << " C: " << c << " POINTS: " << currentPointCounter << endl;
+
+                int anelli = currentPointCounter;
+                if (isClosed)
+                    currentPointCounter *= 2;
+                if (currentPointCounter > maxPointEver)
+                {
+                    maxPointEver = currentPointCounter;
+                    printSolCorrector(r, c, anelli);
+                    //printSol();
+                }
+            }
+        }
+    }
+}
+
+bool findPath(int r, int c)
 {
     auto next = make_pair(r, c);
     auto res = next;
@@ -136,7 +182,7 @@ void findPath(int r, int c)
     {
         res = nextRedZone(next.first, next.second, false, -1, -1);
         // printSol();
-        cout << res.first << " " << res.second << " - from searching red" << endl;
+        // cout << res.first << " " << res.second << " - from searching red" << endl;
 
         if (res.first != -1 && res.second != -1)
             next = res;
@@ -145,7 +191,7 @@ void findPath(int r, int c)
 
         res = findRedZonePath(next.first, next.second);
         // printSol();
-        cout << res.first << " " << res.second << " - from red zone" << endl;
+        // cout << res.first << " " << res.second << " - from red zone" << endl;
         if (res.first != -1 && res.second != -1)
             next = res;
     }
@@ -153,8 +199,13 @@ void findPath(int r, int c)
     redSol[startR][startC] = 0;
     res = nextRedZone(next.first, next.second, true, startR, startC);
     redSol[startR][startC] = backUp;
-    printSol();
-    cout << next.first << " " << next.second << " - FROM ENDING" << endl;
+    //printSol();
+
+    if (res.first != -1 && res.second != -1)
+        return true;
+    else
+        return false;
+    // cout << next.first << " " << next.second << " - FROM ENDING" << endl;
 }
 
 void redZone()
@@ -237,9 +288,11 @@ void redZone()
             if (red[r][c] > 0)
                 red[r][c] = toFix[red[r][c]];
 
-    redZonePoints = new int[nr];
+    redZonePointLenght = nr;
+    redZonePointsOr = new int[redZonePointLenght];
+    redZonePoints = new int[redZonePointLenght];
     for (int i = 0; i < A; i++)
-        redZonePoints[red[anelli[i].r][anelli[i].c]]++;
+        redZonePointsOr[red[anelli[i].r][anelli[i].c]]++;
 }
 
 int voidTrysLeft = VOID_TRYES;
@@ -425,6 +478,7 @@ int findNextInRedRec(int r, int c, int color, int from, bool avevaCurvato, bool 
         if (me & (ANELLO_BLACK | ANELLO_WHITE))
         {
             voidTrysLeft = VOID_TRYES;
+            currentPointCounter++;
             puntiInZonaToDo--;
         }
         else
@@ -552,7 +606,6 @@ pair<int, int> nextRedZone(int r, int c, bool findStart, int rStart, int cStart)
     }
     if (!found) //NON TROVATO
         return make_pair(-1, -1);
-    cout << "RES: " << r << " " << c << endl;
 
     //DELETE LAST PERCHE FORSE FUNZIONA MEGLIO BOH NON SO
     int last = visited[res.first][res.second];
@@ -747,4 +800,49 @@ void printRed()
         cout << endl;
     }
     cout << endl;
+}
+
+void printSolCorrector(int r, int c, int anelli)
+{
+    //printSol();
+    int stR = r, stC = c;
+    stringstream ss;
+    int i = 0;
+    int d = redSol[r][c];
+    do
+    {
+        switch (d)
+        {
+        case UP:
+            ss << "U";
+            r--;
+            break;
+        case DOWN:
+            ss << "D";
+            r++;
+            break;
+        case LEFT:
+            ss << "L";
+            c--;
+            break;
+        case RIGHT:
+            ss << "R";
+            c++;
+            break;
+
+        default:
+            break;
+        }
+        i++;
+        d = redSol[r][c];
+        if (r == stR && c == stC)
+            d = -1;
+    } while (d > 0);
+    ss << "#";
+
+    out << anelli << " "
+        << i << " "
+        << stR << " "
+        << stC << " "
+        << ss.str() << endl;
 }
