@@ -8,7 +8,8 @@
 #include <queue>
 #include <set>
 #include <sstream>
-//#include "swrace.h"
+#include <string.h>
+// #include "swrace.h"
 
 using namespace std;
 
@@ -48,6 +49,9 @@ struct Anello
 #define RIGHT 8
 
 #define VOID_TRYES 8
+#define MAX_BF_DEPTH 6
+
+set<pair<int, int>> used;
 
 int R, C;
 int W, B;
@@ -70,7 +74,7 @@ Anello *anelli;
 ifstream in("input.txt");
 ofstream out("output.txt");
 #else
-ifstream in("../input/input13.txt");
+ifstream in("../input/input19.txt");
 ostream &out(cout);
 #endif
 
@@ -134,38 +138,49 @@ int main()
 int maxPointEver = 0;
 void partiDappertutto()
 {
+    int *ii = new int[R * C];
     for (int r = 0; r < R; r++)
+        for (int c = 0; c < R; c++)
+            ii[(r * C) + c] = (r * C) + c;
+
+    random_shuffle(&ii[0], &ii[R*C]);
+
+    for (int i = 0; i < (R*C); i++)
     {
-        for (int c = 0; c < C; c++)
+        int index = ii[i];
+        int c = index % C;
+        int r = index / R;
+
+        if (red[r][c] < 0)
         {
-            if (red[r][c] < 0)
+            //RESET
+            for (int r = 0; r < R; r++)
             {
-                //RESET
-                for (int r = 0; r < R; r++)
-                {
-                    for (int c = 0; c < C; c++)
-                    {
-                        visited[r][c] = 0;
-                        redSol[r][c] = 0;
-                        visitedTemp[r][c] = false;
-                    }
-                }
+                memset(visited[r], 0, C * sizeof(*visited[r]));
+                memset(redSol[r], 0, C * sizeof(*redSol[r]));
+                memset(visitedTemp[r], false, C * sizeof(*visitedTemp[r]));
+                // for (int c = 0; c < C; c++)
+                // {
+                //     visited[r][c] = 0;
+                //     redSol[r][c] = 0;
+                //     visitedTemp[r][c] = false;
+                // }
+            }
 
-                for (int i = 0; i < redZonePointLenght; i++)
-                    redZonePoints[i] = redZonePointsOr[i];
+            for (int i = 0; i < redZonePointLenght; i++)
+                redZonePoints[i] = redZonePointsOr[i];
 
-                currentPointCounter = 0;
-                int isClosed = findPath(r, c);
-                //cout << "R: " << r << " C: " << c << " POINTS: " << currentPointCounter << endl;
+            currentPointCounter = 0;
+            int isClosed = findPath(r, c);
+            cout << "R: " << r << " C: " << c << " POINTS: " << currentPointCounter << endl;
 
-                if (isClosed)
-                    currentPointCounter *= 2;
-                if (currentPointCounter > maxPointEver)
-                {
-                    if (printSolCorrector(r, c))
-                        maxPointEver = currentPointCounter;
-                    //printSol();
-                }
+            if (isClosed)
+                currentPointCounter *= 2;
+            if (currentPointCounter > maxPointEver)
+            {
+                if (printSolCorrector(r, c))
+                    maxPointEver = currentPointCounter;
+                //printSol();
             }
         }
     }
@@ -308,29 +323,31 @@ pair<int, int> findRedZonePath(int r, int c)
     //TODO: fix direction
     latestPoint = make_pair(-1, -1);
 
+    used.clear();
+
     int thisDir = redSol[r][c];
     if (thisDir == UP)
     {
         puntiInZonaToDo = redZonePoints[red[r - 1][c]];
-        findNextInRedRec(r - 1, c, red[r - 1][c], DOWN, false, false, false, 5);
+        findNextInRedRec(r - 1, c, red[r - 1][c], DOWN, false, false, false, MAX_BF_DEPTH);
         redZonePoints[red[r - 1][c]] = -1;
     }
     else if (thisDir == DOWN)
     {
         puntiInZonaToDo = redZonePoints[red[r + 1][c]];
-        findNextInRedRec(r + 1, c, red[r + 1][c], UP, false, false, false, 5);
+        findNextInRedRec(r + 1, c, red[r + 1][c], UP, false, false, false, MAX_BF_DEPTH);
         redZonePoints[red[r + 1][c]] = -1;
     }
     else if (thisDir == LEFT)
     {
         puntiInZonaToDo = redZonePoints[red[r][c - 1]];
-        findNextInRedRec(r, c - 1, red[r][c - 1], RIGHT, false, false, false, 5);
+        findNextInRedRec(r, c - 1, red[r][c - 1], RIGHT, false, false, false, MAX_BF_DEPTH);
         redZonePoints[red[r][c - 1]] = -1;
     }
     else if (thisDir == RIGHT)
     {
         puntiInZonaToDo = redZonePoints[red[r][c + 1]];
-        findNextInRedRec(r, c + 1, red[r][c + 1], LEFT, false, false, false, 5);
+        findNextInRedRec(r, c + 1, red[r][c + 1], LEFT, false, false, false, MAX_BF_DEPTH);
         redZonePoints[red[r][c + 1]] = -1;
     }
 
@@ -344,11 +361,14 @@ int findNextInRedRec(int r, int c, int color, int from, bool avevaCurvato, bool 
         return -1;
     if (deveCurvare && deveAndareDritto)
         return -1;
+    if (used.count(make_pair(r, c)))
+        return -1;
+    used.insert(make_pair(r, c));
     if (redSol[r][c] != 0)
         return -1;
     if (red[r][c] != color)
         return 0;
-    if (leftDepth != 5 && visitedTemp[r][c]) // MAYBE SET
+    if (leftDepth != MAX_BF_DEPTH && visitedTemp[r][c]) // MAYBE SET
         return -1;
 
     int me = mat[r][c];
@@ -409,21 +429,25 @@ int findNextInRedRec(int r, int c, int color, int from, bool avevaCurvato, bool 
     if (nextDir & UP)
     {
         int p = findNextInRedRec(r - 1, c, color, DOWN, (from & (LEFT | RIGHT)), nextDeveCurvare, nextDeveAndareDritto, leftDepth - 1);
+        used.erase(make_pair(r - 1, c));
         toSort[nrOfPossibility++] = make_pair(p, UP);
     }
     if (nextDir & DOWN)
     {
         int p = findNextInRedRec(r + 1, c, color, UP, (from & (LEFT | RIGHT)), nextDeveCurvare, nextDeveAndareDritto, leftDepth - 1);
+        used.erase(make_pair(r + 1, c));
         toSort[nrOfPossibility++] = make_pair(p, DOWN);
     }
     if (nextDir & LEFT)
     {
         int p = findNextInRedRec(r, c - 1, color, RIGHT, (from & (UP | DOWN)), nextDeveCurvare, nextDeveAndareDritto, leftDepth - 1);
+        used.erase(make_pair(r, c - 1));
         toSort[nrOfPossibility++] = make_pair(p, LEFT);
     }
     if (nextDir & RIGHT)
     {
         int p = findNextInRedRec(r, c + 1, color, LEFT, (from & (UP | DOWN)), nextDeveCurvare, nextDeveAndareDritto, leftDepth - 1);
+        used.erase(make_pair(r, c + 1));
         toSort[nrOfPossibility++] = make_pair(p, RIGHT);
     }
     sort(toSort, toSort + nrOfPossibility);
@@ -431,7 +455,7 @@ int findNextInRedRec(int r, int c, int color, int from, bool avevaCurvato, bool 
         return -1;
     int maxPoint = toSort[nrOfPossibility - 1].first;
 
-    if (leftDepth == 5 && maxPoint > -1)
+    if (leftDepth == MAX_BF_DEPTH && maxPoint > -1)
     {
         //GO DRITTO SE SI PUO
         bool goingDritto = false;
@@ -499,6 +523,7 @@ int findNextInRedRec(int r, int c, int color, int from, bool avevaCurvato, bool 
             }
         }
 
+        int ree;
         switch (toSort[nrOfPossibility - 1].second)
         {
         case UP:
@@ -506,28 +531,36 @@ int findNextInRedRec(int r, int c, int color, int from, bool avevaCurvato, bool 
             redSol[r][c] = UP;
             visitedTemp[r - 1][c] = true;
             latestPoint = make_pair(r - 1, c);
-            return findNextInRedRec(r - 1, c, color, DOWN, (from & (LEFT | RIGHT)), nextDeveCurvare, nextDeveAndareDritto, leftDepth);
+            ree = findNextInRedRec(r - 1, c, color, DOWN, (from & (LEFT | RIGHT)), nextDeveCurvare, nextDeveAndareDritto, leftDepth);
+            used.erase(make_pair(r - 1, c));
+            return ree;
             break;
         case DOWN:
             // cout << "R: " << r + 1 << " C: " << c << "\t-> GO DOWN" << endl;
             redSol[r][c] = DOWN;
             visitedTemp[r + 1][c] = true;
             latestPoint = make_pair(r + 1, c);
-            return findNextInRedRec(r + 1, c, color, UP, (from & (LEFT | RIGHT)), nextDeveCurvare, nextDeveAndareDritto, leftDepth);
+            ree = findNextInRedRec(r + 1, c, color, UP, (from & (LEFT | RIGHT)), nextDeveCurvare, nextDeveAndareDritto, leftDepth);
+            used.erase(make_pair(r + 1, c));
+            return ree;
             break;
         case LEFT:
             // cout << "R: " << r << " C: " << c - 1 << "\t-> GO LEFT" << endl;
             redSol[r][c] = LEFT;
             visitedTemp[r][c - 1] = true;
             latestPoint = make_pair(r, c - 1);
-            return findNextInRedRec(r, c - 1, color, RIGHT, (from & (UP | DOWN)), nextDeveCurvare, nextDeveAndareDritto, leftDepth);
+            ree = findNextInRedRec(r, c - 1, color, RIGHT, (from & (UP | DOWN)), nextDeveCurvare, nextDeveAndareDritto, leftDepth);
+            used.erase(make_pair(r, c - 1));
+            return ree;
             break;
         case RIGHT:
             // cout << "R: " << r << " C: " << c + 1 << "\t-> GO RIGHT" << endl;
             redSol[r][c] = RIGHT;
             visitedTemp[r][c + 1] = true;
             latestPoint = make_pair(r, c + 1);
-            return findNextInRedRec(r, c + 1, color, LEFT, (from & (UP | DOWN)), nextDeveCurvare, nextDeveAndareDritto, leftDepth);
+            ree = findNextInRedRec(r, c + 1, color, LEFT, (from & (UP | DOWN)), nextDeveCurvare, nextDeveAndareDritto, leftDepth);
+            used.erase(make_pair(r, c + 1));
+            return ree;
             break;
 
         default:
@@ -915,7 +948,10 @@ bool printSolCorrector(int r, int c)
     int anelli = punti;
 
     if (closed)
+    {
         punti *= 2;
+        cout << "PUNTI: " << punti << endl;
+    }
 
     if (punti > maxPuntiVeri)
     {

@@ -5,6 +5,7 @@
         "ostream": "cpp",
         "queue": "cpp",
         "iostream": "cpp",
-        "streambuf": "cpp"
+        "streambuf": "cpp",
+        "sstream": "cpp"
     }
 }
