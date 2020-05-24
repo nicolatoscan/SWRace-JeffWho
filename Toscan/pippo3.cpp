@@ -9,7 +9,7 @@
 #include <set>
 #include <sstream>
 #include <string.h>
-//#include "swrace.h"
+#include "swrace.h"
 
 using namespace std;
 
@@ -51,7 +51,7 @@ struct Anello
 #define RIGHT 8
 
 #define VOID_TRYES 8
-#define MAX_BF_DEPTH 6
+#define MAX_BF_DEPTH 12
 
 set<pair<int, int>> used;
 
@@ -76,7 +76,7 @@ Anello *anelli;
 ifstream in("input.txt");
 ofstream out("output.txt");
 #else
-ifstream in("../input/input0.txt");
+ifstream in("../input/input19.txt");
 ostream &out(cout);
 #endif
 
@@ -131,7 +131,7 @@ int main()
 
     redZone();
 
-    if (R <= 8 && C <= 8 && A > (C*R) / 4)
+    if (false && R <= 8 && C <= 8 && A > (C*R) / 4)
     {
         bruteForceWrapper();
     }
