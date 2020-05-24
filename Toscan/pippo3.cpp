@@ -9,7 +9,7 @@
 #include <set>
 #include <sstream>
 #include <string.h>
-// #include "swrace.h"
+//#include "swrace.h"
 
 using namespace std;
 
@@ -28,6 +28,8 @@ void printSol();
 string printDir(int dir);
 void partiDappertutto();
 bool printSolCorrector(int r, int c);
+int bruteForceCattivo(int r, int c, int from, bool avevaCurvato, bool deveCurvare, bool deveAndareDritto, int point);
+void bruteForceWrapper();
 
 struct Anello
 {
@@ -74,7 +76,7 @@ Anello *anelli;
 ifstream in("input.txt");
 ofstream out("output.txt");
 #else
-ifstream in("../input/input19.txt");
+ifstream in("../input/input0.txt");
 ostream &out(cout);
 #endif
 
@@ -82,7 +84,7 @@ int currentPointCounter = 0;
 
 int main()
 {
-    srand(time(NULL));
+    srand(42);
     in >> R >> C;
     in >> B >> W;
     A = B + W;
@@ -128,10 +130,18 @@ int main()
     }
 
     redZone();
-    while (true)
-        partiDappertutto();
-    //printRed();
 
+    if (R <= 8 && C <= 8 && A > (C*R) / 4)
+    {
+        bruteForceWrapper();
+    }
+    else
+    {
+        while (true)
+            partiDappertutto();
+    }
+
+    //printRed();
     //printNMat(redSol);
     return 0;
 }
@@ -143,9 +153,9 @@ void partiDappertutto()
         for (int c = 0; c < R; c++)
             ii[(r * C) + c] = (r * C) + c;
 
-    random_shuffle(&ii[0], &ii[R*C]);
+    random_shuffle(&ii[0], &ii[R * C]);
 
-    for (int i = 0; i < (R*C); i++)
+    for (int i = 0; i < (R * C); i++)
     {
         int index = ii[i];
         int c = index % C;
@@ -172,7 +182,7 @@ void partiDappertutto()
 
             currentPointCounter = 0;
             int isClosed = findPath(r, c);
-            cout << "R: " << r << " C: " << c << " POINTS: " << currentPointCounter << endl;
+            //cout << "R: " << r << " C: " << c << " POINTS: " << currentPointCounter << endl;
 
             if (isClosed)
                 currentPointCounter *= 2;
@@ -835,6 +845,7 @@ void printRed()
 }
 
 int maxPuntiVeri = 0;
+int bkUp;
 bool printSolCorrector(int r, int c)
 {
     // CHECKER
@@ -845,7 +856,6 @@ bool printSolCorrector(int r, int c)
     bool errore = false;
     // end CHECKER
 
-    //printSol();
     int stR = r, stC = c;
     stringstream ss;
     int i = 0;
@@ -940,6 +950,9 @@ bool printSolCorrector(int r, int c)
 
     } while (d > 0);
 
+    if (!closed && (mat[r][c] & (ANELLO_BLACK | ANELLO_WHITE)) > 0)
+        punti++;
+
     if (errore || nextDeveAndareDritto || nextDeveCurvare)
         return false;
 
@@ -950,7 +963,7 @@ bool printSolCorrector(int r, int c)
     if (closed)
     {
         punti *= 2;
-        cout << "PUNTI: " << punti << endl;
+        //cout << "PUNTI: " << punti << endl;
     }
 
     if (punti > maxPuntiVeri)
@@ -961,6 +974,107 @@ bool printSolCorrector(int r, int c)
             << stC << " "
             << ss.str() << endl;
     }
+    //printSol();
 
     return true;
+}
+
+void bruteForceWrapper()
+{
+    bkUp = mat[1][0];
+    mat[1][0] = ANELLO_WHITE;
+    bruteForceCattivo(0, 0, DOWN, true, false, false, 0);
+}
+
+int maxInBrute = 0;
+int bruteForceCattivo(int r, int c, int from, bool avevaCurvato, bool deveCurvare, bool deveAndareDritto, int point)
+{
+    if (r < 0 || r >= R || c < 0 || c >= C)
+        return -1;
+    if (deveCurvare && deveAndareDritto)
+        return -1;
+    if (visited[r][c])
+        return -1;
+
+    int me = mat[r][c];
+    if (((me & ANELLO_BLACK) && deveAndareDritto) || ((me & ANELLO_WHITE) && deveCurvare))
+        return -1;
+    if ((me & ANELLO_BLACK) && avevaCurvato)
+        return -1;
+
+    if (me & (ANELLO_BLACK | ANELLO_WHITE))
+        point++;
+
+    visited[r][c] = true;
+    redSol[r][c] = from;
+
+    if (point > maxInBrute)
+    {
+        mat[1][0] = bkUp;
+        printSolCorrector(r, c);
+        mat[1][0] = ANELLO_WHITE;
+        maxInBrute = point;
+    }
+
+    bool nextDeveCurvare = ((me & ANELLO_WHITE) && !avevaCurvato) ? true : false;
+    bool nextDeveAndareDritto = (me & ANELLO_BLACK) ? true : false;
+
+    int nextDir = 0;
+
+    if (deveAndareDritto || (me & ANELLO_WHITE)) //1 Possibilità
+    {
+        if (from == UP)
+            nextDir |= DOWN;
+        else if (from == DOWN)
+            nextDir |= UP;
+        else if (from == LEFT)
+            nextDir |= RIGHT;
+        else if (from == RIGHT)
+            nextDir |= LEFT;
+    }
+    else // > 1 possibilità
+    {
+        if (deveCurvare || (me & ANELLO_BLACK))
+        {
+            if (from == UP || from == DOWN)
+                nextDir |= (LEFT | RIGHT);
+            else
+                nextDir |= (UP | DOWN);
+        }
+        else
+        {
+            nextDir = (UP | DOWN | LEFT | RIGHT) & ~(from);
+        }
+
+        //CERCA ANELLI
+        // int preferedDir = 0;
+        // if (r > 0 && (mat[r - 1][c] & ANELLO_ANY))
+        //     preferedDir |= UP;
+        // if (r < R - 1 && (mat[r + 1][c] & ANELLO_ANY))
+        //     preferedDir |= DOWN;
+        // if (c > 0 && (mat[r][c - 1] & ANELLO_ANY))
+        //     preferedDir |= LEFT;
+        // if (c < C - 1 && (mat[r][c + 1] & ANELLO_ANY))
+        //     preferedDir |= RIGHT;
+    }
+    if (nextDir & RIGHT)
+    {
+        bruteForceCattivo(r, c + 1, LEFT, (from & (UP | DOWN)), nextDeveCurvare, nextDeveAndareDritto, point);
+    }
+    if (nextDir & UP)
+    {
+        bruteForceCattivo(r - 1, c, DOWN, (from & (LEFT | RIGHT)), nextDeveCurvare, nextDeveAndareDritto, point);
+    }
+    if (nextDir & DOWN)
+    {
+        bruteForceCattivo(r + 1, c, UP, (from & (LEFT | RIGHT)), nextDeveCurvare, nextDeveAndareDritto, point);
+    }
+    if (nextDir & LEFT)
+    {
+        bruteForceCattivo(r, c - 1, RIGHT, (from & (UP | DOWN)), nextDeveCurvare, nextDeveAndareDritto, point);
+    }
+    visited[r][c] = false;
+    redSol[r][c] = 0;
+
+    return point;
 }
