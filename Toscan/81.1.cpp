@@ -9,7 +9,7 @@
 #include <set>
 #include <sstream>
 #include <string.h>
-//#include "swrace.h"
+#include "swrace.h"
 
 using namespace std;
 
@@ -51,7 +51,7 @@ struct Anello
 #define RIGHT 8
 
 #define VOID_TRYES 8
-#define MAX_BF_DEPTH 7
+#define MAX_BF_DEPTH 6
 
 set<pair<int, int>> used;
 
@@ -76,7 +76,7 @@ Anello *anelli;
 ifstream in("input.txt");
 ofstream out("output.txt");
 #else
-ifstream in("../input/input19.txt");
+ifstream in("../input/input0.txt");
 ostream &out(cout);
 #endif
 
@@ -84,7 +84,7 @@ int currentPointCounter = 0;
 
 int main()
 {
-    srand(42);
+    srand(time(NULL));
     in >> R >> C;
     in >> B >> W;
     A = B + W;
