@@ -2,6 +2,8 @@
 #include <iostream>
 #include <iomanip>
 #include <string>
+#include <algorithm>
+#include <set>
 using namespace std;
 
 /* ------------------------------------------ */
@@ -9,6 +11,7 @@ using namespace std;
 #define EMPTY 0
 #define RING_WHITE 1
 #define RING_BLACK 2
+#define RINGS 3
 
 #define PATH_VER 4
 #define PATH_HOR 8
@@ -22,34 +25,18 @@ using namespace std;
 #define MOV_LEFT 512
 #define MOV_RIGHT 1024
 #define MOV_DOWN 2048
-#define MOVS 3840
 #define MOVV 2304
 #define MOVH 1536
-
+#define MOVS 3840
 
 #define BORDER 4096
 
-/* -----------------------------------------¯- */
 
-typedef struct Angoli
-{
-    int first_row;
-    int first_col;
-    int last_row;
-    int last_col;
+#define MAX_DEPTH 6
 
-    Angoli()
-    {
-        first_row = first_col = last_row = last_col = -1;
-    }
-    Angoli(int fr, int fc, int lr, int lc)
-    {
-        first_row = fr;
-        first_col = fc;
-        last_row = lr;
-        last_col = lc;
-    }
-}Angoli;
+/* ------------------------------------------- */
+
+
 
 /* ------------------------------------------ */
 
@@ -63,6 +50,15 @@ int R1, C1, R2, C2;
 // Matrice base con anelli
 int **mat;
 
+// Movimenti
+int **mat_movs;
+
+// Dove sono arrivato
+pair<int, int> arrived;
+
+// Celle usate in brute force
+set<pair<int,int>> blocked;
+
 /* ------------------------------------------ */
 
 int input = 6
@@ -75,56 +71,64 @@ ifstream in("../input/" + sfile);
 /* ------------------------------------------ */
 
 void load(void);
+
 void get_around(void);
+int prosegui(void);
+int prosegui_rec(pair<int, int> coord, int last_move, bool ultimo_dritto, bool deve_dritto, bool deve_curvare, int depth_left, int mov_target);
 
-/* ------------------------------------------ */
+int keep_ring(int n);
+int keep_path(int n);
+int keep_mov(int n);
+int mov_inv(int n);
+pair<int, int> mov_apply(int r, int c, int mov);
+pair<int, int> mov_apply(pair<int,int> coord, int mov);
 
-int keep_ring(int n)
+void show_path(void);
+
+/* ---------------------------------------------------------------------------- */
+
+int main(void)
 {
-    return n & (RING_BLACK | RING_WHITE);
-}
-int keep_path(int n)
-{
-    return n & 252;
-}
-int keep_mov(int n)
-{
-    return n & 3840;
-}
-int mov_inv(int n)
-{
-    switch (n)
-    {
-        case MOV_UP: return MOV_DOWN;
-        case MOV_RIGHT: return MOV_LEFT;
-        case MOV_DOWN: return MOV_UP;
-        case MOV_LEFT: return MOV_RIGHT;
-    }
-}
-pair<int, int> mov_apply(int r, int c, int mov)
-{
-    if(mov == MOV_UP) return make_pair(r - 1, c);
-    else if(mov == MOV_DOWN) return make_pair(r + 1, c);
-    else if(mov == MOV_LEFT) return make_pair(r, c - 1);
-    else return make_pair(r, c + 1);
-}
-pair<int, int> mov_apply(pair<int,int> coord, int mov)
-{
-    return mov_apply(coord.first, coord.second, mov);
+    cout << "FILE: \n# " + sfile << endl << endl;
+
+    load();
+    
+    return 0;
 }
 
-int prosegui(pair<int, int> coord, int last_move, bool ultimo_dritto, bool deve_dritto, bool deve_curvare, int depth)
+/* ---------------------------------------------------------------------------- */
+
+void get_around(void)
+{
+    // Parto da angolo top-left
+    mat[1][1] += PATH_CURVE_4;
+
+    // Vado giù
+    // down_left();
+}
+
+int prosegui(void)
+{
+    // resetta mat_movs
+    blocked.clear();
+}
+
+int prosegui_rec(pair<int, int> coord, int last_move, bool ultimo_dritto, bool deve_dritto, bool deve_curvare, int depth_left, int mov_target)
 {
     int r = coord.first, c = coord.second;
+    arrived = make_pair(r, c);
+
+    // Punto se sono su un ring
+    int point = mat[r][c] & RINGS ? 1 : 0;
 
     // Tolgo mossa inversa dalle possibili
     int movs = MOVS & ~ mov_inv(last_move);
 
     // Tolgo mosse che vanno fuori dalle celle possibili (Bordi e celle dove sono già stato)
-    if(mat[r-1][c] & BORDER) movs &= ~MOV_UP;
-    if(mat[r+1][c] & BORDER) movs &= ~MOV_DOWN;
-    if(mat[r][c-1] & BORDER) movs &= ~MOV_LEFT;
-    if(mat[r][c+1] & BORDER) movs &= ~MOV_RIGHT;
+    if(mat[r-1][c] & BORDER || mat_movs[r-1][c] & MOVS) movs &= ~MOV_UP;
+    if(mat[r+1][c] & BORDER || mat_movs[r+1][c] & MOVS) movs &= ~MOV_DOWN;
+    if(mat[r][c-1] & BORDER || mat_movs[r][c-1] & MOVS) movs &= ~MOV_LEFT;
+    if(mat[r][c+1] & BORDER || mat_movs[r][c+1] & MOVS) movs &= ~MOV_RIGHT;
     
     // Rispetto regole
     if(last_move & (MOV_UP | MOV_DOWN))
@@ -150,6 +154,7 @@ int prosegui(pair<int, int> coord, int last_move, bool ultimo_dritto, bool deve_
 
     // Ramo morto
     int ways = 0;
+    pair<int,int> *results = new pair<int, int>[4];
 
     // Faccio mosse possibili
     for(i = MOV_UP; i <= MOV_DOWN; i *= 2)
@@ -158,33 +163,28 @@ int prosegui(pair<int, int> coord, int last_move, bool ultimo_dritto, bool deve_
         if(i & movs)
         {
             // Ho trovato un modo valido per proseguire
-            ways++;
-
-            int boh = prosegui(mov_apply(r, c, i), i, i &)
+            int points = prosegui_rec(mov_apply(r, c, i), i, i == last_move, next_deve_dritto, next_deve_curvare, depth_left - 1, mov_target);
+            if(points > -1) results[ways++] = make_pair(points, i);
         }
     }
-}
 
-/* ---------------------------------------------------------------------------- */
+    // Ordino risultati per punteggio
+    sort(results, results + ways);
 
-int main(void)
-{
-    cout << "FILE: \n# " + sfile << endl << endl;
+    // Se mi trovo in un ramo morto
+    if(ways < 1) return -1;
 
-    load();
-    
-    return 0;
-}
-
-/* ---------------------------------------------------------------------------- */
-
-void get_around(void)
-{
-    // Parto da angolo top-left
-    mat[1][1] += PATH_CURVE_4;
-
-    // Vado giù
-    // down_left();
+    // Se è la prima ricorsione valuto i risultati delle depth
+    if(depth_left == MAX_DEPTH)
+    {
+        mat_movs[r][c] = results[ways - 1].second;
+        
+    }
+    else
+    {
+        // Sono dentro la ricorsione
+        return results[ways - 1].first + point;
+    }
 }
 
 /* ------------------------------------------ */
@@ -226,9 +226,46 @@ void load(void)
     }
 }
 
+int keep_ring(int n)
+{
+    return n & (RING_BLACK | RING_WHITE);
+}
+
+int keep_path(int n)
+{
+    return n & 252;
+}
+
+int keep_mov(int n)
+{
+    return n & 3840;
+}
+
+int mov_inv(int n)
+{
+    switch (n)
+    {
+        case MOV_UP: return MOV_DOWN;
+        case MOV_RIGHT: return MOV_LEFT;
+        case MOV_DOWN: return MOV_UP;
+        case MOV_LEFT: return MOV_RIGHT;
+    }
+}
+pair<int, int> mov_apply(int r, int c, int mov)
+{
+    if(mov == MOV_UP) return make_pair(r - 1, c);
+    else if(mov == MOV_DOWN) return make_pair(r + 1, c);
+    else if(mov == MOV_LEFT) return make_pair(r, c - 1);
+    else return make_pair(r, c + 1);
+}
+pair<int, int> mov_apply(pair<int,int> coord, int mov)
+{
+    return mov_apply(coord.first, coord.second, mov);
+}
+
 /* ------------------------------------------ */
 
-void show_path()
+void show_path(void)
 {
     cout << "\033[32m   ";
     for (int c = 0; c < C; c++)
