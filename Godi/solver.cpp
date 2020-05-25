@@ -6,6 +6,7 @@
 #include <queue>
 #include <set>
 #include <sstream>
+#include "swrace.h"
 using namespace std;
 
 /* ------------------------------------------ */
@@ -35,7 +36,7 @@ using namespace std;
 
 
 #define MOSSA_INVALIDA -1
-#define MAX_DEPTH 10
+#define MAX_DEPTH 9
 
 /* ------------------------------------------- */
 
@@ -56,10 +57,6 @@ int** mat;
 // Movimenti
 int** mat_movs;
 
-// Dove sono partito e arrivato
-pair<int, int> started;
-pair<int, int> arrived;
-
 // Celle usate in brute force
 set<pair<int, int>> blocked;
 
@@ -71,6 +68,12 @@ bool saved_deve_curvare = false;
 // Ultime celle
 coordinate backup_c1;
 coordinate backup_c2;
+
+// Ultima posizione sicura raggiunta
+coordinate tampone;
+
+// piu grande
+int MAXXIMA = 0;
 
 /* ------------------------------------------ */
 
@@ -114,39 +117,111 @@ bool printSolCorrector(int r, int c);
 
 /* ---------------------------------------------------------------------------- */
 
+void printNMat(int **mat)
+{
+    for (int r = 0; r < R2; r++)
+    {
+        for (int c = 0; c < C2; c++)
+        {
+            int n = mat[r][c];
+            if (n > 0)
+                cout << "\033[31m";
+            if (n < 10 && n >= 0)
+                cout << " " << n << " ";
+            else
+                cout << n << " ";
+            if (n >= 0)
+                cout << "\033[0m";
+        }
+        cout << endl;
+    }
+    cout << endl;
+}
+
 int main(void)
 {
-    cout << "FILE: \n# " + sfile << endl << endl;
+    srand(43);
 
+    //cout << "FILE: \n# " + sfile << endl << endl;
     load();
+    // printNMat(mat);
+    int kk = 1, kkkk = 1;
+    for(;;){
+        mat_movs_clear();
+        while(mat[kk][kkkk] != 0 || mat[kk+1][kkkk] != 0) { kk++;}
+        if(kk > R2 - 6) {kk = 1; kkkk++; continue;}
 
-    mat_movs_clear();
+        mossa j = MOV_DOWN;
+        mat_movs[kk][kkkk] = MOV_DOWN;
 
-    coordinate caz = make_pair(1, 1);
-    mossa j = MOV_LEFT;
+        coordinate caz;
+        caz = make_pair(kk+1,kkkk);
 
-    j = trova_prossima_mossa(caz, j, saved_precedente_dritto, saved_deve_dritto, saved_deve_curvare, MOV_DOWN);
-    for (int i = 0; i < 1000; i++)
-    {
         j = trova_prossima_mossa(caz, j, saved_precedente_dritto, saved_deve_dritto, saved_deve_curvare, MOV_DOWN);
+        for (int i = 0; i < 1000; i++)
+        {
+            j = trova_prossima_mossa(caz, j, saved_precedente_dritto, saved_deve_dritto, saved_deve_curvare, MOV_DOWN);
 
-        //cout << mov_to_char(j) << endl;
-        if (j == -1) break;
+            //cout << mov_to_char(j) << endl;
+            if (j == -1) break;
+            caz = mov_apply(caz, j);
+        }
 
-        caz = mov_apply(caz, j);
-    }
-
-    if(!visualstudio) show_path();
-    printSolCorrector(1, 1);
+        // show_path();
+        printSolCorrector(kk, kkkk);}
     return 0;
 }
 
-/* ---------------------------------------------------------------------------- */
+// int main(void)
+// {
+//     srand(43);
 
+//     //cout << "FILE: \n# " + sfile << endl << endl;
+//     load();
+//     // printNMat(mat);
+//     int kk = rand()%R1 + 1, kkkk = rand()%C1 + 1;
+//     for(;;){
+//         mat_movs_clear();
+//         kk = rand()%R1 + 1, kkkk = rand()%C1 + 1;
+//         while(mat[kk][kkkk] != 0 || mat[kk+1][kkkk] != 0) { kk = rand()%R1 + 1, kkkk = rand()%C1 + 1;}
+//         // if(kk > R2 - 6) {kk = 1; kkkk++; continue;}
+//         // if(kkkk > C2 - 6) {kkkk = 1; kk++; continue;}
+
+//         mossa j = MOV_DOWN;
+//         mat_movs[kk][kkkk] = MOV_DOWN;
+
+//         coordinate caz;
+//         caz = make_pair(kk+1,kkkk);
+
+//         j = trova_prossima_mossa(caz, j, saved_precedente_dritto, saved_deve_dritto, saved_deve_curvare, MOV_DOWN);
+//         for (int i = 0; i < 1000; i++)
+//         {
+//             j = trova_prossima_mossa(caz, j, saved_precedente_dritto, saved_deve_dritto, saved_deve_curvare, MOV_DOWN);
+
+//             //cout << mov_to_char(j) << endl;
+//             if (j == -1) break;
+//             caz = mov_apply(caz, j);
+//         }
+
+//         show_path();
+//         printSolCorrector(kk, kkkk);}
+//     return 0;
+// }
+
+/* ---------------------------------------------------------------------------- */
+int ba = 1;
 mossa trova_prossima_mossa(coordinate current_pos, mossa last_mov, bool precedente_dritto, bool deve_dritto, bool deve_curvare, mossa direction_focus)
 {
     // r, c
     int r = current_pos.first, c = current_pos.second;
+
+    if(r < 1 || r >= R2 || c < 1 || c >= C2)
+    {
+        return -1;
+        // cout << "AAAA" << endl << endl;
+        // printNMat(mat);
+    }
+        // cout << "smarmella " << r << " " << c << endl;
 
     // mat[r][c]
     cella cel = mat[r][c];
@@ -163,6 +238,8 @@ mossa trova_prossima_mossa(coordinate current_pos, mossa last_mov, bool preceden
     bool next_deve_curvare = cel & RING_WHITE && precedente_dritto;
 
     // Deve esserci almeno una mossa possibile a questo punto
+    // NON E' VERO
+    // SE SONO SU UN ANELLO E DOPO DEVO CONTINUARE E NON POSSO DEVO ANNULLARE
     if (!(movs & MOVS))
     {
         // Sono bloccato!
@@ -170,13 +247,13 @@ mossa trova_prossima_mossa(coordinate current_pos, mossa last_mov, bool preceden
     }
 
     // ACCORCIA LE COSE EASY
-    // int zazza = 0;
-    // for (int i = MOV_UP; i <= MOV_DOWN; i *= 2) if (i & movs) zazza++;
-    // if (zazza == 1)
-    // {
-    //     mat_movs[r][c] = movs;
-    //     return movs;
-    // }
+    /*int zazza = 0;
+    for (int i = MOV_UP; i <= MOV_DOWN; i *= 2) if (i & movs) zazza++;
+    if (zazza == 1)
+    {
+        mat_movs[r][c] = movs;
+        return movs;
+    }*/
 
     // Provo le mosse possibili
     int ways = 0;
@@ -201,7 +278,7 @@ mossa trova_prossima_mossa(coordinate current_pos, mossa last_mov, bool preceden
 
     // ATTENZIONE COSE BRUTTE
     // SE PUOI ANDARE A DX VACCI
-    for (int i = 0; i < ways; i++)
+    if (rand() % 4 == 0) for (int i = 0; i < ways; i++)
     {
         if (r < R2 / 2)
         {
@@ -276,7 +353,7 @@ mossa trova_prossima_mossa(coordinate current_pos, mossa last_mov, bool preceden
                     }
                 }
             }
-        }        
+        }
     }
 
     // Saved per prossima chiamata
@@ -289,6 +366,11 @@ mossa trova_prossima_mossa(coordinate current_pos, mossa last_mov, bool preceden
 
     // NON DOVREBBE ESSERCI QUESTA COSA
     if(def_mov & ~(MOVS)) return -1;
+
+    if ((!deve_curvare) && (!deve_dritto) && cel == 0)
+    {
+        tampone = make_pair(r, c);
+    }
 
     return def_mov;
 }
@@ -314,7 +396,7 @@ int valuta_mossa(coordinate current_pos, mossa last_mov, bool precedente_dritto,
         return MOSSA_INVALIDA;
     }
 
-    // A questo punto la mossa che mi porta nella cella in cui sono è valida e fattibile
+    // A questo punto la mossa che mi porta nella cella in cui sono è valida e fattibile [ATTENZIONE NON E' VERO MAI]
     // Devo vedere se il percorso può continuare oltre e quanto mi conviene
 
     // Punto se sono su un ring
@@ -344,12 +426,12 @@ int valuta_mossa(coordinate current_pos, mossa last_mov, bool precedente_dritto,
     }
 
     // ACCORCIA LE COSE EASY
-    // int zazza = 0;
-    // for (int i = MOV_UP; i <= MOV_DOWN; i *= 2) if (i & movs) zazza++;
-    // if (zazza == 1)
-    // {
-    //     return movs;
-    // }
+    /*int zazza = 0;
+    for (int i = MOV_UP; i <= MOV_DOWN; i *= 2) if (i & movs) zazza++;
+    if (zazza == 1)
+    {
+        return movs;
+    }*/
 
     // Non sono in fondo alla ricorsione
     // Provo le mosse possibili (1<= ways <= 3)
@@ -397,10 +479,10 @@ mosse filtra_mosse_possibili(coordinate current_pos, mossa last_mov, bool deve_d
     mosse movs = MOVS & ~mov_inv(last_mov);
 
     // Tolgo mosse che vanno fuori dalle celle possibili (Bordi e celle dove sono già stato)
-    if (mat[r - 1][c] & BORDER || mat_movs[r - 1][c] & MOVS || blocked.count(make_pair(r - 1, c)) > 0) movs &= ~MOV_UP;
-    if (mat[r + 1][c] & BORDER || mat_movs[r + 1][c] & MOVS || blocked.count(make_pair(r + 1, c)) > 0) movs &= ~MOV_DOWN;
-    if (mat[r][c - 1] & BORDER || mat_movs[r][c - 1] & MOVS || blocked.count(make_pair(r, c - 1)) > 0) movs &= ~MOV_LEFT;
-    if (mat[r][c + 1] & BORDER || mat_movs[r][c + 1] & MOVS || blocked.count(make_pair(r, c + 1)) > 0) movs &= ~MOV_RIGHT;
+    if (mat[r - 1][c] == BORDER || mat_movs[r - 1][c] & MOVS || blocked.count(make_pair(r - 1, c)) > 0) movs &= ~MOV_UP;
+    if (mat[r + 1][c] == BORDER || mat_movs[r + 1][c] & MOVS || blocked.count(make_pair(r + 1, c)) > 0) movs &= ~MOV_DOWN;
+    if (mat[r][c - 1] == BORDER || mat_movs[r][c - 1] & MOVS || blocked.count(make_pair(r, c - 1)) > 0) movs &= ~MOV_LEFT;
+    if (mat[r][c + 1] == BORDER || mat_movs[r][c + 1] & MOVS || blocked.count(make_pair(r, c + 1)) > 0) movs &= ~MOV_RIGHT;
 
     // Rispetto regole
     if (last_mov & MOVV)
@@ -693,6 +775,10 @@ bool printSolCorrector(int r, int c)
             d = -1;
         }
 
+        if (r == tampone.first && c == tampone.second)
+        {
+            break;
+        }
     } while (d > 0);
 
     if (!closed && (mat[r][c] & (RING_BLACK | RING_WHITE)) > 0)
@@ -711,8 +797,9 @@ bool printSolCorrector(int r, int c)
         //cout << "PUNTI: " << punti << endl;
     }
 
-    if (punti > 0)
+    if (punti > MAXXIMA)
     {
+        MAXXIMA = punti;
         out << anelli << " "
             << i << " "
             << stR << " "
