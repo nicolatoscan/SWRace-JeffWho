@@ -6,7 +6,7 @@
 #include <queue>
 #include <set>
 #include <sstream>
-#include "swrace.h"
+// #include "swrace.h"
 using namespace std;
 
 /* ------------------------------------------ */
@@ -16,14 +16,6 @@ using namespace std;
 #define RING_BLACK 2
 #define RINGS 3
 
-#define PATH_VER 4
-#define PATH_HOR 8
-
-#define PATH_CURVE_1 16  //
-#define PATH_CURVE_2 32  //
-#define PATH_CURVE_3 64  //
-#define PATH_CURVE_4 128 //
-
 #define MOV_UP 256
 #define MOV_LEFT 512
 #define MOV_RIGHT 1024
@@ -32,11 +24,7 @@ using namespace std;
 #define MOVH 1536
 #define MOVS 3840
 
-#define BORDER 4096
-
-
-#define MOSSA_INVALIDA -1
-#define MAX_DEPTH 9
+#define MAX_DEPTH 8
 
 /* ------------------------------------------- */
 
@@ -49,7 +37,6 @@ typedef pair<int, int> coordinate;
 
 // Data
 int R, C, B, W, A;
-int R1, C1, R2, C2;
 
 // Matrice base con anelli
 int** mat;
@@ -65,15 +52,14 @@ bool saved_precedente_dritto = true;
 bool saved_deve_dritto = false;
 bool saved_deve_curvare = false;
 
-// Ultime celle
-coordinate backup_c1;
-coordinate backup_c2;
-
 // Ultima posizione sicura raggiunta
 coordinate tampone;
 
+// Robe
+bool scendendo;
+
 // piu grande
-int MAXXIMA = 0;
+int punteggio_max = 0;
 
 /* ------------------------------------------ */
 
@@ -114,29 +100,9 @@ bool same_orientation(mossa mov1, mossa mov2);
 
 void show_path(void);
 bool printSolCorrector(int r, int c);
+void printNMat(int **mat);
 
 /* ---------------------------------------------------------------------------- */
-
-void printNMat(int **mat)
-{
-    for (int r = 0; r < R2; r++)
-    {
-        for (int c = 0; c < C2; c++)
-        {
-            int n = mat[r][c];
-            if (n > 0)
-                cout << "\033[31m";
-            if (n < 10 && n >= 0)
-                cout << " " << n << " ";
-            else
-                cout << n << " ";
-            if (n >= 0)
-                cout << "\033[0m";
-        }
-        cout << endl;
-    }
-    cout << endl;
-}
 
 int main(void)
 {
@@ -149,8 +115,8 @@ int main(void)
     for(;;){
         mat_movs_clear();
         while(mat[kk][kkkk] != 0 || mat[kk+1][kkkk] != 0) { kk++;}
-        if(kk > R2 - 6) {kk = 1; kkkk++; continue;}
-
+        if(kk > R-4) {kk = 1; kkkk++; continue;}
+        scendendo = true;
         mossa j = MOV_DOWN;
         mat_movs[kk][kkkk] = MOV_DOWN;
 
@@ -167,7 +133,7 @@ int main(void)
             caz = mov_apply(caz, j);
         }
 
-        // show_path();
+        show_path();
         printSolCorrector(kk, kkkk);}
     return 0;
 }
@@ -209,19 +175,11 @@ int main(void)
 // }
 
 /* ---------------------------------------------------------------------------- */
-int ba = 1;
+
 mossa trova_prossima_mossa(coordinate current_pos, mossa last_mov, bool precedente_dritto, bool deve_dritto, bool deve_curvare, mossa direction_focus)
 {
     // r, c
     int r = current_pos.first, c = current_pos.second;
-
-    if(r < 1 || r >= R2 || c < 1 || c >= C2)
-    {
-        return -1;
-        // cout << "AAAA" << endl << endl;
-        // printNMat(mat);
-    }
-        // cout << "smarmella " << r << " " << c << endl;
 
     // mat[r][c]
     cella cel = mat[r][c];
@@ -243,7 +201,7 @@ mossa trova_prossima_mossa(coordinate current_pos, mossa last_mov, bool preceden
     if (!(movs & MOVS))
     {
         // Sono bloccato!
-        return MOSSA_INVALIDA;
+        return -1;
     }
 
     // ACCORCIA LE COSE EASY
@@ -278,80 +236,123 @@ mossa trova_prossima_mossa(coordinate current_pos, mossa last_mov, bool preceden
 
     // ATTENZIONE COSE BRUTTE
     // SE PUOI ANDARE A DX VACCI
-    if (rand() % 4 == 0) for (int i = 0; i < ways; i++)
+    if (rand() % 3 == 0) 
+    for (int i = 0; i < ways; i++)
     {
-        if (r < R2 / 2)
+        /*
+        if (r < R / 2)
         {
-            if (c < C2 / 2)
+            if (c < C / 2)
             {
+                // In alto a sx
                 if (r < c)
-                {
-                    if (results[i].second == MOV_UP)
-                    {
-                        def_mov = MOV_UP;
-                    }
-                }
-                else
                 {
                     if (results[i].second == MOV_LEFT)
                     {
                         def_mov = MOV_LEFT;
                     }
                 }
+                else
+                {
+                    if (results[i].second == MOV_DOWN)
+                    {
+                        def_mov = MOV_DOWN;
+                    }
+                }
             }
             else
             {
-                if (r < C2 - c)
+                // In alto a dx
+                if (r < C - c)
                 {
-                    if (results[i].second == MOV_UP)
+                    if (results[i].second == MOV_LEFT)
                     {
-                        def_mov = MOV_UP;
+                        def_mov = MOV_LEFT;
                     }
                 }
                 else
                 {
-                    if (results[i].second == MOV_RIGHT)
+                    if (results[i].second == MOV_UP)
                     {
-                        def_mov = MOV_RIGHT;
+                        def_mov = MOV_UP;
                     }
                 }
             }
         }
         else
         {
-            if (c < C2 / 2)
+            if (c < C / 2)
             {
-                if (R2 - r < c)
-                {
-                    if (results[i].second == MOV_DOWN)
-                    {
-                        def_mov = MOV_DOWN;
-                    }
-                }
-                else
-                {
-                    if (results[i].second == MOV_LEFT)
-                    {
-                        def_mov = MOV_LEFT;
-                    }
-                }
-            }
-            else
-            {
-                if (R2 - r < C2 - c)
-                {
-                    if (results[i].second == MOV_DOWN)
-                    {
-                        def_mov = MOV_DOWN;
-                    }
-                }
-                else
+                // In basso a sx
+                if (R - r < c)
                 {
                     if (results[i].second == MOV_RIGHT)
                     {
                         def_mov = MOV_RIGHT;
                     }
                 }
+                else
+                {
+                    if (results[i].second == MOV_DOWN)
+                    {
+                        def_mov = MOV_DOWN;
+                    }
+                }
+            }
+            else
+            {
+                // In basso a dx
+                if (R - r < C - c)
+                {
+                    if (results[i].second == MOV_RIGHT)
+                    {
+                        def_mov = MOV_RIGHT;
+                    }
+                }
+                else
+                {
+                    if (results[i].second == MOV_UP)
+                    {
+                        def_mov = MOV_UP;
+                    }
+                }
+            }
+        }*/
+        if(scendendo)
+        {
+            if(R-r > 10)
+            {
+                if (R-r > 20 && results[i].second == MOV_LEFT)
+                {
+                    def_mov = MOV_LEFT;
+                }
+                if (results[i].second == MOV_DOWN)
+                {
+                    def_mov = MOV_DOWN;
+                }
+            }
+            else
+            {
+                scendendo = false;
+            }            
+        }
+        else
+        {
+            // salendo
+            if(r > 10)
+            {
+                if (r > 20 && results[i].second == MOV_LEFT)
+                {
+                    def_mov = MOV_LEFT;
+                }
+                if (results[i].second == MOV_UP)
+                {
+                    def_mov = MOV_UP;
+                }
+            }
+            else
+            {
+                scendendo = true;
             }
         }
     }
@@ -393,7 +394,7 @@ int valuta_mossa(coordinate current_pos, mossa last_mov, bool precedente_dritto,
     if (cel & RING_BLACK && !precedente_dritto)
     {
         // Sono su un anello nero e prima non sono andato dritto, non valido!
-        return MOSSA_INVALIDA;
+        return -1;
     }
 
     // A questo punto la mossa che mi porta nella cella in cui sono è valida e fattibile [ATTENZIONE NON E' VERO MAI]
@@ -404,10 +405,7 @@ int valuta_mossa(coordinate current_pos, mossa last_mov, bool precedente_dritto,
 
     // Filtro mosse
     mosse movs = filtra_mosse_possibili(current_pos, last_mov, deve_dritto, deve_curvare);
-    /*cout << "# ";
-    if (movs & (~MOVS))
-        cout << "ERROREEEEEE ";
-    cout << movs << endl;*/
+    
     // Se sono su anello nero le due prossime mosse dovranno avere stessa direzione
     bool next_deve_dritto = cel & RING_BLACK;
     // Se sono su anello bianco e prima non ho curvato, adesso continuerò dritto ma dopo dovrò curvare
@@ -479,10 +477,10 @@ mosse filtra_mosse_possibili(coordinate current_pos, mossa last_mov, bool deve_d
     mosse movs = MOVS & ~mov_inv(last_mov);
 
     // Tolgo mosse che vanno fuori dalle celle possibili (Bordi e celle dove sono già stato)
-    if (mat[r - 1][c] == BORDER || mat_movs[r - 1][c] & MOVS || blocked.count(make_pair(r - 1, c)) > 0) movs &= ~MOV_UP;
-    if (mat[r + 1][c] == BORDER || mat_movs[r + 1][c] & MOVS || blocked.count(make_pair(r + 1, c)) > 0) movs &= ~MOV_DOWN;
-    if (mat[r][c - 1] == BORDER || mat_movs[r][c - 1] & MOVS || blocked.count(make_pair(r, c - 1)) > 0) movs &= ~MOV_LEFT;
-    if (mat[r][c + 1] == BORDER || mat_movs[r][c + 1] & MOVS || blocked.count(make_pair(r, c + 1)) > 0) movs &= ~MOV_RIGHT;
+    if (r - 1 < 0  || mat_movs[r - 1][c] & MOVS || blocked.count(make_pair(r - 1, c)) > 0) movs &= ~MOV_UP;
+    if (r + 1 >= R || mat_movs[r + 1][c] & MOVS || blocked.count(make_pair(r + 1, c)) > 0) movs &= ~MOV_DOWN;
+    if (c - 1 < 0  || mat_movs[r][c - 1] & MOVS || blocked.count(make_pair(r, c - 1)) > 0) movs &= ~MOV_LEFT;
+    if (c + 1 >= C || mat_movs[r][c + 1] & MOVS || blocked.count(make_pair(r, c + 1)) > 0) movs &= ~MOV_RIGHT;
 
     // Rispetto regole
     if (last_mov & MOVV)
@@ -512,24 +510,19 @@ void load(void)
     in >> R >> C >> B >> W;
     A = B + W;
 
-    R1 = R + 1;
-    C1 = C + 1;
-    R2 = R + 2;
-    C2 = C + 2;
-
-    mat = new int* [R2];
-    mat_movs = new int* [R2];
+    mat = new int* [R];
+    mat_movs = new int* [R];
 
     int r, c;
 
     // Inizializza
-    for (r = 0; r < R2; r++)
+    for (r = 0; r < R; r++)
     {
-        mat[r] = new int[C2];
-        mat_movs[r] = new int[C2];
-        for (c = 0; c < C2; c++)
+        mat[r] = new int[C];
+        mat_movs[r] = new int[C];
+        for (c = 0; c < C; c++)
         {
-            mat[r][c] = (r == 0 || c == 0 || r == R1 || c == C1) ? BORDER : EMPTY;
+            mat[r][c] = 0;
         }
     }
 
@@ -538,21 +531,21 @@ void load(void)
     {
         in >> r >> c;
 
-        mat[r + 1][c + 1] = RING_BLACK;
+        mat[r][c] = RING_BLACK;
     }
     for (int i = 0; i < W; i++) // White
     {
         in >> r >> c;
 
-        mat[r + 1][c + 1] = RING_WHITE;
+        mat[r][c] = RING_WHITE;
     }
 }
 
 void mat_movs_clear(void)
 {
-    for (int r = 0; r < R2; r++)
+    for (int r = 0; r < R; r++)
     {
-        for (int c = 0; c < C2; c++)
+        for (int c = 0; c < C; c++)
         {
             mat_movs[r][c] = 0;
         }
@@ -628,21 +621,21 @@ void show_path(void)
 {
 
     cout << "\033[32m   ";
-    for (int c = 0; c < C2; c++)
+    for (int c = 0; c < C; c++)
         if (c < 10)
             cout << "  " << c;
         else
             cout << " " << c;
     cout << "\033[0m" << endl;
 
-    for (int r = 0; r < R2; r++)
+    for (int r = 0; r < R; r++)
     {
         if (r < 10)
             cout << "\033[32m  " << r << " \033[0m";
         else
             cout << "\033[32m " << r << " \033[0m";
 
-        for (int c = 0; c < C2; c++)
+        for (int c = 0; c < C; c++)
         {
             int color = 31;
             int n = mat_movs[r][c];
@@ -684,7 +677,7 @@ bool printSolCorrector(int r, int c)
     bool errore = false;
     // end CHECKER
 
-    int stR = r-1, stC = c-1;
+    int stR = r, stC = c;
     stringstream ss;
     int i = 0;
     int d = mat_movs[r][c];
@@ -797,9 +790,9 @@ bool printSolCorrector(int r, int c)
         //cout << "PUNTI: " << punti << endl;
     }
 
-    if (punti > MAXXIMA)
+    if (punti > punteggio_max)
     {
-        MAXXIMA = punti;
+        punteggio_max = punti;
         out << anelli << " "
             << i << " "
             << stR << " "
@@ -809,4 +802,25 @@ bool printSolCorrector(int r, int c)
     //printSol();
 
     return true;
+}
+
+void printNMat(int **mat)
+{
+    for (int r = 0; r < R; r++)
+    {
+        for (int c = 0; c < C; c++)
+        {
+            int n = mat[r][c];
+            if (n > 0)
+                cout << "\033[31m";
+            if (n < 10 && n >= 0)
+                cout << " " << n << " ";
+            else
+                cout << n << " ";
+            if (n >= 0)
+                cout << "\033[0m";
+        }
+        cout << endl;
+    }
+    cout << endl;
 }
